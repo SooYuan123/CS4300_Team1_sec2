@@ -1,0 +1,34 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+*.env
+*.venv
+
+# Django stuff
+*.log
+*.pot
+*.pyc
+db.sqlite3
+media/
+staticfiles/
+
+# pytest cache
+.pytest_cache
+
+# PyCharm specific files
+.idea
+
+# IDE or editor specific files (other editors)
+.vscode/
+.swp
+
+# System-specific files
+.DS_Store
+Thumbs.db
+
