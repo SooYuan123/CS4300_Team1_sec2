@@ -17,11 +17,14 @@
     source venv/bin/activate 
 
 2. Install dependencies
-- pip install django
+   ```bash
+   pip install django
 
 3. Run migrations
-- python manage.py migrate
+   ```bash
+   python manage.py migrate
 
-4. Start server
-- python manage.py runserver 0.0.0.0:3000
+5. Start server
+   ```bash
+   python manage.py runserver 0.0.0.0:3000
 - Open browser at http://127.0.0.1:3000/
