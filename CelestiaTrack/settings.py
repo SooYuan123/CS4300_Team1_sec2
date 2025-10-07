@@ -25,7 +25,12 @@ SECRET_KEY = 'django-insecure-j78f(bqzq4)^o!%&8^=iin%os)_&t+89phd=^0&g4pvl+^%eeb
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'editor-kongsooyuan-20.devedu.io', # Used when you access the editor preview
+    'app-kongsooyuan-20.devedu.io',   # Used when you access the running application via the 'App' link
+    '0.0.0.0',
+    '127.0.0.1'
+]
 
 
 # Application definition
