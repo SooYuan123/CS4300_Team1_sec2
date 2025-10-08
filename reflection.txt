@@ -1,0 +1,14 @@
+Sprint 0-3 Team1 Reflection
+
+
+Tyler Andrews:
+This project was a great learning experience in building a Django web app, especially with creating a clean and attractive landing page using Bootstrap. I got to dive into how Django handles static files and templates, and troubleshoot issues with file paths and configuration. Using Bootstrap really helped improve the responsiveness and design, and taught me how important simplicity and readability are in front-end development. As I went through a few redesigns, I also gained a better understanding of how Django’s back and front-end interact to keep things clean and easy to maintain. This project increased my confidence in web app design.
+
+Soo Yuan Kong:
+This sprint significantly improved my skills in developing a visually appealing and neatly structured webpage within the Django framework. I gained a clearer understanding of virtual environments and their role in project isolation. While troubleshooting and resolving issues like "DisallowedHost", I learned the correct way to configure the settings, which is critical for server functionality. I also reinforced a habit of doing frequent commits, which it is a good practice for team collaboration and transparency. Implementing changes like having a moving star background and replacing the background with a high-resolution image greatly enhanced the project's aesthetic, and it really interested me in doing user interface design.
+
+Benjamin Lambert:
+This sprint allowed me to get refamiliarized with Django. Some of the initial setup and creation of templates felt oddly familiar to Ruby on Rails and Vue.js but with its own quirks. Given that prior experience, I was fairly familiar with the MVC /MVT structure and that made navigating the files a bit easier. I was able to write some CSS and html files to style the page allowing me to get more experience doing the thing I would like to get into, Front End Software Development. I did find creating the view a bit interesting as it differed slightly from what I am used to in Rails. Overall it was a pretty smooth sprint to get us started with our webpage.
+
+Dylan Trent:
+I learned through this project and through Homework #2 how to make, modify, and implement basic webpages in Django with html and css. I had very little prior experience with these and now feel much more proficient at templating/UI, figuring out server errors, and so on. Our group seems to be working well together, with tasks being done in a timely manner. Right now, tasks are being worked on and finished mostly on a volunteer basis and has worked well enough so far, but going forward we may need to assign tasks and deadlines, that are agreed upon by everyone, to give our project workflow a little more structure.
