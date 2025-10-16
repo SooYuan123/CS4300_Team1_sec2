@@ -1,5 +1,6 @@
 name: Django CI/CD Pipeline
 
+# Triggers the workflow on every push and Pull Request (PR) to the main branch
 on:
   push:
     branches: [ main ]
@@ -67,7 +68,7 @@ jobs:
         coverage report --fail-under=80 
 
   # --------------------------------------------------------
-  # JOB 2: AI Code Review using OpenAI 
+  # JOB 2: AI Code Review using OpenAI
   # --------------------------------------------------------
   ai_code_review:
     # Runs only for Pull Requests, and only if tests pass
