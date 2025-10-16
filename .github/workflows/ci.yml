@@ -75,13 +75,12 @@ jobs:
 
     steps:
     - name: AI Code Review
-      # --- REPLACED UNAVAILABLE ACTION WITH CIROLINI/GENAI-CODE-REVIEW ---
-      uses: cirolini/genai-code-review@v2
+      uses: anc95/ChatGPT-CodeReview@main
       with:
         # Use the name of your GitHub secret
         openai_api_key: ${{ secrets.OPENAI_API_KEY }}
         # Pass the token GitHub automatically provides
         github_token: ${{ secrets.GITHUB_TOKEN }}
         github_pr_id: ${{ github.event.number }}
-        openai_engine: 'gpt-4-turbo' # Use a powerful model for good feedback
+        openai_model: 'gpt-4-turbo' # Use a powerful model for good feedback
         custom_prompt: "Review the code for security vulnerabilities, Django best practices, and adherence to Python style guides (PEP8). Ensure new code is fully covered by tests and provides actionable feedback."
