@@ -56,7 +56,7 @@ jobs:
         ${{ env.DATABASE_URL }}
       run: python manage.py migrate
 
-    - name: Run Tests & Report Coverage (5pts + 5pts)
+    - name: Run Tests & Report Coverage
       env:
         ${{ env.SECRET_KEY }}
         ${{ env.DJANGO_SETTINGS_MODULE }}
