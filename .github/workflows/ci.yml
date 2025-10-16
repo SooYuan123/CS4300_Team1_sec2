@@ -1,0 +1,85 @@
+name: Django CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ----------------------------------------------------
+  # JOB 1: Test Execution & Coverage Report
+  # ----------------------------------------------------
+  test_and_coverage:
+    runs-on: ubuntu-latest
+
+    # Use a service container for a clean database environment
+    services:
+      postgres:
+        image: postgres:15-alpine
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: ci_db
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: pip install -r requirements.txt
+
+    - name: Configure Settings for CI (Temporary Step for DB/Key)
+      run: |
+        # In a real project, these are typically set up via a specialized settings file (settings_ci.py)
+        echo "SECRET_KEY=dummy-key-for-ci" >> $GITHUB_ENV
+        echo "DJANGO_SETTINGS_MODULE=CelestiaTrack.settings" >> $GITHUB_ENV
+        echo "DATABASE_URL=postgres://ci_user:ci_password@postgres:5432/ci_db" >> $GITHUB_ENV
+
+    - name: Run Database Migrations
+      env:
+        # Pass variables from previous step
+        ${{ env.SECRET_KEY }}
+        ${{ env.DJANGO_SETTINGS_MODULE }}
+        ${{ env.DATABASE_URL }}
+      run: python manage.py migrate
+
+    - name: Run Tests & Report Coverage (5pts + 5pts)
+      env:
+        ${{ env.SECRET_KEY }}
+        ${{ env.DJANGO_SETTINGS_MODULE }}
+        ${{ env.DATABASE_URL }}
+      run: |
+        # Runs tests and creates coverage report
+        coverage run --source='home,CelestiaTrack' manage.py test
+        # Reports coverage metrics in console (5pts requirement)
+        coverage report --fail-under=80 
+
+  # --------------------------------------------------------
+  # JOB 2: AI Code Review using OpenAI 
+  # --------------------------------------------------------
+  ai_code_review:
+    # Runs only for Pull Requests, and only if tests pass
+    if: github.event_name == 'pull_request'
+    needs: [test_and_coverage]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: AI Code Review
+      uses: zencor/openai-code-review-action@v1.0.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # Uses the secret key
+        OPENAI_MODEL: gpt-4-turbo
+        REVIEW_PROMPT: "Review the code for security vulnerabilities, Django best practices, and adherence to Python style guides (PEP8). Ensure new code is fully covered by tests."
