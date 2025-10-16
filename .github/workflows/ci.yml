@@ -41,16 +41,9 @@ jobs:
     - name: Install Dependencies
       run: pip install -r requirements.txt
 
-    - name: Configure Settings for CI (Temporary Step for DB/Key)
-      run: |
-        # In a real project, these are typically set up via a specialized settings file (settings_ci.py)
-        echo "SECRET_KEY=dummy-key-for-ci" >> $GITHUB_ENV
-        echo "DJANGO_SETTINGS_MODULE=CelestiaTrack.settings" >> $GITHUB_ENV
-        echo "DATABASE_URL=postgres://ci_user:ci_password@postgres:5432/ci_db" >> $GITHUB_ENV
-
     - name: Run Database Migrations
       env:
-        # Pass variables from previous step
+        # Environment variables are now defined here explicitly
         ${{ env.SECRET_KEY }}
         ${{ env.DJANGO_SETTINGS_MODULE }}
         ${{ env.DATABASE_URL }}
