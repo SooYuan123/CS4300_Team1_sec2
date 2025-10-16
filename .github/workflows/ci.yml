@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   # ----------------------------------------------------
   # JOB 1: Test Execution & Coverage Report
@@ -60,20 +64,24 @@ jobs:
         # Reports coverage metrics in console (5pts requirement)
         coverage report --fail-under=80 
 
-  # --------------------------------------------------------
-  # JOB 2: AI Code Review using OpenAI
+# --------------------------------------------------------
+  # JOB 2: AI Code Review using OpenAI (10pts)
   # --------------------------------------------------------
   ai_code_review:
-    # Runs only for Pull Requests, and only if tests pass
+    # Only runs if it's a Pull Request and the tests job succeeded
     if: github.event_name == 'pull_request'
     needs: [test_and_coverage]
     runs-on: ubuntu-latest
 
     steps:
     - name: AI Code Review
-      uses: zencor/openai-code-review-action@v1.0.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # Uses the secret key
-        OPENAI_MODEL: gpt-4-turbo
-        REVIEW_PROMPT: "Review the code for security vulnerabilities, Django best practices, and adherence to Python style guides (PEP8). Ensure new code is fully covered by tests."
+      # --- REPLACED UNAVAILABLE ACTION WITH CIROLINI/GENAI-CODE-REVIEW ---
+      uses: cirolini/genai-code-review@v2
+      with:
+        # Use the name of your GitHub secret
+        openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+        # Pass the token GitHub automatically provides
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        github_pr_id: ${{ github.event.number }}
+        openai_engine: 'gpt-4-turbo' # Use a powerful model for good feedback
+        custom_prompt: "Review the code for security vulnerabilities, Django best practices, and adherence to Python style guides (PEP8). Ensure new code is fully covered by tests and provides actionable feedback."
