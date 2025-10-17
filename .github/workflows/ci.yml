@@ -74,15 +74,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
     - name: AI Code Review
       uses: anc95/ChatGPT-CodeReview@main
-      with:
+      env:
         # Use GITHUB_TOKEN for posting comments
         github_token: ${{ secrets.GITHUB_TOKEN }}
         # Use the name of your GitHub secret
         openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-
+      with:
         model: 'gpt-4-turbo' # Use a powerful model for good feedback
-
         # Custom prompt for specific instructions
         custom_prompt: "Review the code for security vulnerabilities, Django best practices, and adherence to Python style guides (PEP8). Ensure new code is fully covered by tests and provides actionable feedback."
