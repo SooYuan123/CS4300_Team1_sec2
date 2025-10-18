@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upcoming Astronomical Events</title>
+    <style>
+        body {
+            background-color: #0a0a1a;
+            color: #f2f2f2;
+            font-family: "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 2rem;
+        }
+        h1 {
+            text-align: center;
+            color: #00ccff;
+            margin-bottom: 2rem;
+        }
+        .event-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .event-card h3 { margin: 0; color: #ffffff; }
+        .category { font-size: 0.9em; color: #00ccff; }
+        p { margin: 0.3rem 0; }
+        .label { color: #00ccff; }
+    </style>
+</head>
+<body>
+    <h1>Upcoming Astronomical Events</h1>
+
+    {% if events %}
+        {% for event in events %}
+        <div class="event-card">
+            <div class="category">{{ event.category }}</div>
+            <h3>{{ event.name }} — {{ event.type }}</h3>
+            <p><span class="label">UTC:</span> {{ event.utc_time }}</p>
+            <p><span class="label">Description:</span> {{ event.description }}</p>
+            <p><span class="label">Visibility:</span> {{ event.visibility }}</p>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="text-align:center;">No upcoming events found. Try widening the date range or changing observer location.</p>
+    {% endif %}
+</body>
+</html>

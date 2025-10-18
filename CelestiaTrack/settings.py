@@ -29,7 +29,8 @@ ALLOWED_HOSTS = [
     'editor-kongsooyuan-20.devedu.io', # Used when you access the editor preview
     'app-kongsooyuan-20.devedu.io',   # Used when you access the running application via the 'App' link
     '0.0.0.0',
-    '127.0.0.1'
+    '127.0.0.1',
+    'localhost'
 ]
 
 
