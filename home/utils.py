@@ -17,12 +17,11 @@ def get_auth_header():
 def fetch_astronomical_events(body, latitude, longitude, elevation=0, from_date=None, to_date=None):
     today = datetime.utcnow().date()
     
-    # Default to 1000 days ahead if no to_date is provided
+    # Default window: past 365 days to next ~3 years
     if not to_date:
-        to_date = today + timedelta(days=1000)
-    # Use provided from_date, or default to today
+        to_date = today + timedelta(days=1095)  # ~3 years ahead
     if not from_date:
-        from_date = today
+        from_date = today - timedelta(days=365)  # past year
 
     params = {
         "latitude": latitude,
