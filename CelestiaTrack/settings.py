@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
+import dj_database_url
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,14 +26,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-j78f(bqzq4)^o!%&8^=iin%os)_&t+89phd=^0&g4pvl+^%eeb'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
+# Render URL will be automatically added here
+# The '*' allows all traffic to the Render URL once DEBUG is False
 ALLOWED_HOSTS = [
-    'editor-kongsooyuan-20.devedu.io', # Used when you access the editor preview
-    'app-kongsooyuan-20.devedu.io',   # Used when you access the running application via the 'App' link
-    '0.0.0.0',
     '127.0.0.1',
-    'localhost'
+    '0.0.0.0',
+    # Use config() to load the Render hostname or default to accepting all
+    config('RENDER_EXTERNAL_HOSTNAME', default='*')
 ]
 
 
@@ -88,6 +92,14 @@ DATABASES = {
     }
 }
 
+# In production, connect to the PostgreSQL database provided by Render
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    DATABASES['default'] = dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -122,9 +134,10 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
-
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [ BASE_DIR / "home" / "static", ] # looks inside home/static/
+# Tell Django where to look for static files to serve
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "home", "static"),]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
