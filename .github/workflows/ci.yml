@@ -18,20 +18,6 @@ jobs:
   test_and_coverage:
     runs-on: ubuntu-latest
 
-    # Use a service container for a clean database environment
-    services:
-      postgres:
-        image: postgres:15-alpine
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        env:
-          POSTGRES_USER: ci_user
-          POSTGRES_PASSWORD: ci_password
-          POSTGRES_DB: ci_db
 
     steps:
     - name: Checkout Code
@@ -48,20 +34,21 @@ jobs:
     - name: Run Database Migrations
       env:
         SECRET_KEY: dummy-key-for-ci
-        DJANGO_SETTINGS_MODULE: CelestiaTrack.settings
-        # Pass connection string for the CI service container
-        DATABASE_URL: postgres://ci_user:ci_password@postgres:5432/ci_db
+        DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
+        ASTRONOMY_API_APP_ID: ci_test_id
+        ASTRONOMY_API_APP_SECRET: ci_test_secret
       run: python manage.py migrate
 
     - name: Run Tests & Report Coverage
       env:
         SECRET_KEY: dummy-key-for-ci
-        DJANGO_SETTINGS_MODULE: CelestiaTrack.settings
-        DATABASE_URL: postgres://ci_user:ci_password@postgres:5432/ci_db
+        DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
+        ASTRONOMY_API_APP_ID: ci_test_id
+        ASTRONOMY_API_APP_SECRET: ci_test_secret
+
       run: |
         # Runs tests and creates coverage report
         coverage run --source='home,CelestiaTrack' manage.py test
-        # Reports coverage metrics in console (5pts requirement)
         coverage report --fail-under=80 
 
 # --------------------------------------------------------
