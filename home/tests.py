@@ -2,7 +2,8 @@ from django.test import TestCase
 from django.urls import reverse
 import requests
 import requests_mock
-from home.utils import fetch_astronomical_events, get_auth_header, fetch_all_events
+from home.utils import fetch_astronomical_events, get_auth_header
+from home.views import fetch_all_events
 
 class HomePageTest(TestCase):
     """Tests the basic functionality of the landing page."""
