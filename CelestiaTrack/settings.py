@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,16 +21,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-j78f(bqzq4)^o!%&8^=iin%os)_&t+89phd=^0&g4pvl+^%eeb'
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") # Uses secret key variable set in render
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
     'editor-kongsooyuan-20.devedu.io', # Used when you access the editor preview
     'app-kongsooyuan-20.devedu.io',   # Used when you access the running application via the 'App' link
     '0.0.0.0',
-    '127.0.0.1'
+    '127.0.0.1',
+    'CS4300_Team1_CelestiaTrack.onrender.com',
 ]
 
 
