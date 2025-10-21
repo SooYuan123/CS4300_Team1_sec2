@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from .utils import fetch_astronomical_events
+from .utils import fetch_all_events
 from datetime import datetime
 from requests.exceptions import HTTPError, ConnectionError, Timeout
 
@@ -19,7 +19,7 @@ def events_list(request):
         initial_events = events_data[:20]
         has_more = len(events_data) > 20
         
-        print(f"DEBUG: Initial events: {len(initial_events)}, has_more: {has_more}")
+        # print(f"DEBUG: Initial events: {len(initial_events)}, has_more: {has_more}")
         
         return render(request, "events_list.html", {
             "events": initial_events,
@@ -29,7 +29,8 @@ def events_list(request):
         print(f"ERROR in events_list: {e}")
         return render(request, "events_list.html", {
             "events": [],
-            "has_more": False
+            "has_more": False,
+            "error_message": "Failed to fetch events due to an API error. Please check credentials."
         })
 
 def events_api(request):
@@ -56,41 +57,10 @@ def events_api(request):
             "events": events_slice,
             "has_more": has_more
         }, status=200)
-    except Exception as e:
+    except (HTTPError, ConnectionError, Timeout, RuntimeError) as e:
         print(f"ERROR in events_api: {e}")
         return JsonResponse({
             "events": [],
             "has_more": False,
             "error": str(e)
-        }, status=500)
-
-def fetch_all_events(latitude, longitude):
-    """Fetch events from all major celestial bodies and sort chronologically"""
-    celestial_bodies = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
-    events_data = []
-
-    for body in celestial_bodies:
-        try:
-            print(f"Fetching events for {body}...")
-            rows = fetch_astronomical_events(body, latitude, longitude)
-            print(f"Response rows for {body}: {rows}")
-
-            for row in rows:
-                for event in row.get("events", []):
-                    data = {
-                        "body": row["body"]["name"],
-                        "type": event.get("type"),
-                        "peak": event.get("eventHighlights", {}).get("peak", {}).get("date"),
-                        "rise": event.get("rise"),
-                        "set": event.get("set"),
-                        "obscuration": event.get("extraInfo", {}).get("obscuration"),
-                        "highlights": event.get("eventHighlights", {})
-                    }
-                    events_data.append(data)
-        except Exception as e:
-            print(f"Error fetching {body} events: {e}")
-
-    print(f"Total events fetched: {len(events_data)}")
-    # Sort by peak date, using datetime.max for events without peak dates
-    events_data = sorted(events_data, key=lambda e: e["peak"] or datetime.max.isoformat())
-    return events_data
+        }, status=500) # Returns status 500 on API/Auth crash

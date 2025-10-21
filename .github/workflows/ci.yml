@@ -35,16 +35,16 @@ jobs:
       env:
         SECRET_KEY: dummy-key-for-ci
         DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
-        ASTRONOMY_API_APP_ID: dummy_id_ci
-        ASTRONOMY_API_APP_SECRET: dummy_secret_ci
+        ASTRONOMY_API_APP_ID: ci_test_id
+        ASTRONOMY_API_APP_SECRET: ci_test_secret
       run: python manage.py migrate
 
     - name: Run Tests & Report Coverage
       env:
         SECRET_KEY: dummy-key-for-ci
         DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
-        ASTRONOMY_API_APP_ID: dummy_id_ci
-        ASTRONOMY_API_APP_SECRET: dummy_secret_ci
+        ASTRONOMY_API_APP_ID: ci_test_id
+        ASTRONOMY_API_APP_SECRET: ci_test_secret
 
       run: |
         # Runs tests and creates coverage report

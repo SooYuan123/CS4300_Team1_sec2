@@ -16,9 +16,6 @@ from decouple import config
 import dj_database_url
 import os
 
-ASTRONOMY_API_APP_ID = config('ASTRONOMY_API_APP_ID', default='')
-ASTRONOMY_API_APP_SECRET = config('ASTRONOMY_API_APP_SECRET', default='')
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
