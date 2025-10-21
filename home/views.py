@@ -65,7 +65,7 @@ def events_api(request):
 
 def fetch_all_events(latitude, longitude):
     """Fetch events from all major celestial bodies and sort chronologically"""
-    celestial_bodies = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
+    celestial_bodies = ["sun", "moon"]
     events_data = []
 
     for body in celestial_bodies:
