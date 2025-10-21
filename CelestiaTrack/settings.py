@@ -22,12 +22,13 @@ ASTRONOMY_API_APP_SECRET = config('ASTRONOMY_API_APP_SECRET', default='')
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+DEBUG = config('DEBUG', default=False, cast=bool) # Temporarily set this to False
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") # Uses secret key variable set in render
+SECRET_KEY = config('SECRETKEY', default='django-insecure-j78f(bqzq4)^o!%&8^=iin%os)&t+89phd=^0&g4pvl+^%eeb')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
