@@ -45,7 +45,6 @@ jobs:
       run: |
         # Runs tests and creates coverage report
         coverage run --source='home,CelestiaTrack' manage.py test
-        # Reports coverage metrics in console (5pts requirement)
         coverage report --fail-under=80 
 
 # --------------------------------------------------------
