@@ -42,5 +42,7 @@ def fetch_astronomical_events(body, latitude, longitude, elevation=0, from_date=
 
 
     response = requests.get(f"{ASTRONOMY_API_BASE}/{body}", headers=get_auth_header(), params=params)
+    if response.status_code == 404:
+        return []
     response.raise_for_status()
     return response.json()["data"]["rows"]

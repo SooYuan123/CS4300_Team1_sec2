@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 import requests
 import requests_mock
-from home.utils import fetch_astronomical_events
+from home.utils import fetch_astronomical_events, get_auth_header
 from home.views import fetch_all_events
 
 class HomePageTest(TestCase):
@@ -83,18 +83,26 @@ class UtilityFunctionTests(TestCase):
     def test_fetch_all_events_sorting_and_aggregation(self):
         """Test that fetch_all_events aggregates data and sorts by date."""
         with requests_mock.Mocker() as m:
-            # Mock successful responses
-            m.get(f"{MOCK_API_BASE}/sun", json={"data": {"rows": generate_mock_rows(1, "Sun")}}, status_code=200)
-            m.get(f"{MOCK_API_BASE}/moon", json={"data": {"rows": generate_mock_rows(1, "Moon")}}, status_code=200)
+            # Mock success for Sun (Later date) and Moon (Earlier date)
+            m.get(f"{MOCK_API_BASE}/sun", json={
+                "data": {"rows": [{"body": {"name": "Sun"}, "events": [
+                    {"type": "Solar", "eventHighlights": {"peak": {"date": "2025-12-05T10:00:00Z"}}}]}]}
+            }, status_code=200)
+            m.get(f"{MOCK_API_BASE}/moon", json={
+                "data": {"rows": [{"body": {"name": "Moon"}, "events": [
+                    {"type": "Lunar", "eventHighlights": {"peak": {"date": "2025-12-01T10:00:00Z"}}}]}]}
+            }, status_code=200)
 
-            # Mock 404 for all other planets
+            # Mock 404 for all other planets (ensures try/except in fetch_all_events is covered)
             for body in ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]:
-                m.get(f"{MOCK_API_BASE}/{body}", status_code=404)
+                m.get(requests_mock.ANY, status_code=404)
 
             events = fetch_all_events("38.77", "-84.39")
 
-            # Assert aggregation and that sorting works based on mock dates
+            # Assert aggregation and sorting by date
             self.assertTrue(len(events) >= 2)
+            self.assertEqual(events[0]["body"], "Moon") # Earliest event first
+            self.assertEqual(events[1]["body"], "Sun")  # Later event second
 
 
 class ViewTests(TestCase):
@@ -109,8 +117,8 @@ class ViewTests(TestCase):
     def test_events_list_view_success_and_pagination_logic(self):
         """Test the main events_list view loads and correctly handles pagination logic."""
         with requests_mock.Mocker() as m:
-            # Generate 30 unique events for 10 bodies
-            mock_rows = generate_mock_rows(30)
+            # Generate 40 unique events (ensures we have > 20 events for has_more=True check)
+            mock_rows = generate_mock_rows(40)
             mock_data = {"data": {"rows": mock_rows}}
 
             # Mock ALL requests to return the 30 events
@@ -159,6 +167,6 @@ class ViewTests(TestCase):
             response = self.client.get(reverse('events_api'))
             data = response.json()
 
-            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.status_code, 500)
             self.assertEqual(len(data['events']), 0)
             self.assertTrue(data['error'])

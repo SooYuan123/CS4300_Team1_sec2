@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from .utils import fetch_astronomical_events
 from datetime import datetime
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 
 def index(request):
     return render(request, 'index.html')
@@ -12,7 +13,7 @@ def events_list(request):
     
     try:
         events_data = fetch_all_events(latitude, longitude)
-        print(f"DEBUG: Fetched {len(events_data)} total events")
+        # print(f"DEBUG: Fetched {len(events_data)} total events")
         
         # Get first 20 events for initial render
         initial_events = events_data[:20]
@@ -24,7 +25,7 @@ def events_list(request):
             "events": initial_events,
             "has_more": has_more
         })
-    except Exception as e:
+    except (HTTPError, ConnectionError, Timeout, RuntimeError) as e:
         print(f"ERROR in events_list: {e}")
         return render(request, "events_list.html", {
             "events": [],
@@ -49,19 +50,19 @@ def events_api(request):
         events_slice = all_events[start_idx:end_idx]
         has_more = end_idx < len(all_events)
         
-        print(f"DEBUG API: offset={offset}, limit={limit}, total={len(all_events)}, slice={len(events_slice)}, has_more={has_more}")
+        # print(f"DEBUG API: offset={offset}, limit={limit}, total={len(all_events)}, slice={len(events_slice)}, has_more={has_more}")
         
         return JsonResponse({
             "events": events_slice,
             "has_more": has_more
-        })
+        }, status=200)
     except Exception as e:
         print(f"ERROR in events_api: {e}")
         return JsonResponse({
             "events": [],
             "has_more": False,
             "error": str(e)
-        })
+        }, status=500)
 
 def fetch_all_events(latitude, longitude):
     """Fetch events from all major celestial bodies and sort chronologically"""
