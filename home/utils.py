@@ -55,9 +55,9 @@ def fetch_all_events(latitude, longitude):
 
     for body in celestial_bodies:
         try:
-            # print(f"Fetching events for {body}...")
+            print(f"Fetching events for {body}...")
             rows = fetch_astronomical_events(body, latitude, longitude)
-            # print(f"Response rows for {body}: {rows}")
+            print(f"Response rows for {body}: {rows}")
 
             for row in rows:
                 for event in row.get("events", []):
