@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from pathlib import Path
+from decouple import config
+import dj_database_url
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,12 +27,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") # Uses secret key variable set in render
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = os.getenv(
-    "ALLOWED_HOSTS",
-    ".onrender.com,127.0.0.1,localhost"
-).split(",")
+
+# Render URL will be automatically added here
+# The '*' allows all traffic to the Render URL once DEBUG is False
+ALLOWED_HOSTS = [
+    '127.0.0.1',
+    '0.0.0.0',
+    # Use config() to load the Render hostname or default to accepting all
+    config('RENDER_EXTERNAL_HOSTNAME', default='*')
+]
+
 
 # Prevent future 403s for POST/CSRF on Render:
 CSRF_TRUSTED_ORIGINS = os.getenv(
@@ -92,6 +100,14 @@ DATABASES = {
     }
 }
 
+# In production, connect to the PostgreSQL database provided by Render
+DATABASE_URL = config('DATABASE_URL', default=None)
+if DATABASE_URL:
+    DATABASES['default'] = dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -127,12 +143,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# Tell Django where to look for static files to serve
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "home", "static"),]
 
-# where collectstatic will put files for production
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-STATICFILES_DIRS = [ BASE_DIR / "home" / "static", ] # looks inside home/static/
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
