@@ -3,6 +3,7 @@ import base64
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from requests.exceptions import HTTPError
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ def fetch_astronomical_events(body, latitude, longitude, elevation=0, from_date=
     }
     params["from_date"] = str(from_date)
     params["to_date"] = str(to_date)
+
 
     response = requests.get(f"{ASTRONOMY_API_BASE}/{body}", headers=get_auth_header(), params=params)
     response.raise_for_status()
