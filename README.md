@@ -24,3 +24,6 @@ You can obtain your credentials by registering at [astronomyapi.com](astronomyap
    ```bash
    python manage.py runserver 0.0.0.0:3000
 - Open browser at http://127.0.0.1:3000/
+
+## Run it on the web
+https://celestiatrack.onrender.com/
