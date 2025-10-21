@@ -3,7 +3,6 @@ import base64
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from requests.exceptions import HTTPError
 
 load_dotenv()
 
