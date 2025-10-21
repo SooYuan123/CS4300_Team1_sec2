@@ -32,7 +32,6 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") # Uses secret key variable set 
 # Render URL will be automatically added here
 # The '*' allows all traffic to the Render URL once DEBUG is False
 ALLOWED_HOSTS = [
-    'celestiatrack.onrender.com',
     '127.0.0.1',
     '0.0.0.0',
     # Use config() to load the Render hostname or default to accepting all
@@ -61,7 +60,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware", # So render works
+    'whitenoise.middleware.WhiteNoiseMiddleware', # So render works
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
