@@ -26,14 +26,16 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") # Uses secret key variable set 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = [
-    'editor-kongsooyuan-20.devedu.io', # Used when you access the editor preview
-    'app-kongsooyuan-20.devedu.io',   # Used when you access the running application via the 'App' link
-    '0.0.0.0',
-    '127.0.0.1',
-    'CS4300_Team1_CelestiaTrack.onrender.com',
-]
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS",
+    ".onrender.com,127.0.0.1,localhost"
+).split(",")
 
+# Prevent future 403s for POST/CSRF on Render:
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS",
+    "https://*.onrender.com"
+).split(",")
 
 # Application definition
 
