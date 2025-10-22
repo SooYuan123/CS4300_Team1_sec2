@@ -26,4 +26,4 @@ You can obtain your credentials by registering at [astronomyapi.com](astronomyap
 - Open browser at http://127.0.0.1:3000/
 
 ## Run it on the web
-https://celestiatrack.onrender.com/
+https://cs4300-team1-celestiatrack.onrender.com/
