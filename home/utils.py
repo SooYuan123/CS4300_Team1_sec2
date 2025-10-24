@@ -4,17 +4,17 @@ import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from requests.exceptions import HTTPError
+from django.conf import settings 
 
 load_dotenv()
-
 ASTRONOMY_API_BASE = "https://api.astronomyapi.com/api/v2/bodies/events"
-ASTRONOMY_API_APP_ID = os.getenv("ASTRONOMY_API_APP_ID")
-ASTRONOMY_API_APP_SECRET = os.getenv("ASTRONOMY_API_APP_SECRET")
 
 
 def get_auth_header():
-    auth_string = base64.b64encode(f"{ASTRONOMY_API_APP_ID}:{ASTRONOMY_API_APP_SECRET}".encode()).decode()
-    return {"Authorization": f"Basic {auth_string}"}
+    app_id = getattr(settings, "ASTRONOMY_API_APP_ID", None) or os.getenv("ASTRONOMY_API_APP_ID")
+    app_secret = getattr(settings, "ASTRONOMY_API_APP_SECRET", None) or os.getenv("ASTRONOMY_API_APP_SECRET")
+    token = base64.b64encode(f"{app_id}:{app_secret}".encode()).decode()
+    return {"Authorization": f"Basic {token}"}
 
 
 def fetch_astronomical_events(body, latitude, longitude, elevation=0, from_date=None, to_date=None):
@@ -38,6 +38,13 @@ def fetch_astronomical_events(body, latitude, longitude, elevation=0, from_date=
     params["from_date"] = str(from_date)
     params["to_date"] = str(to_date)
 
-    response = requests.get(f"{ASTRONOMY_API_BASE}/{body}", headers=get_auth_header(), params=params)
-    response.raise_for_status()
-    return response.json()["data"]["rows"]
+    try:
+        response = requests.get(f"{ASTRONOMY_API_BASE}/{body}", headers=get_auth_header(), params=params)
+        if response.status_code == 404:
+            return []  # graceful “not found”
+        response.raise_for_status()
+        return response.json()["data"]["rows"]
+    except HTTPError as e:
+        if getattr(e, "response", None) is not None and e.response is not None and e.response.status_code == 404:
+            return []  # also accept 404 via raised path
+        raise  # rethrow 403 and others for tests
