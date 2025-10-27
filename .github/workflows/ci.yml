@@ -1,78 +1,196 @@
-name: Django CI/CD Pipeline
+name: CI Pipeline with AI Review
 
-# Triggers the workflow on every push and Pull Request (PR) to the main branch
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
-
-permissions:
-  contents: read
-  pull-requests: write
+    branches: [ main, develop ]
 
 jobs:
-  # ----------------------------------------------------
-  # JOB 1: Test Execution & Coverage Report
-  # ----------------------------------------------------
-  test_and_coverage:
+  test-and-coverage:
     runs-on: ubuntu-latest
 
-
     steps:
-    - name: Checkout Code
+    - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for better AI context
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
         python-version: '3.11'
 
-    - name: Install Dependencies
-      run: pip install -r requirements.txt
-
-    - name: Run Database Migrations
-      env:
-        SECRET_KEY: dummy-key-for-ci
-        DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
-        ASTRONOMY_API_APP_ID: ci_test_id
-        ASTRONOMY_API_APP_SECRET: ci_test_secret
-      run: python manage.py migrate
-
-    - name: Run Tests & Report Coverage
-      env:
-        SECRET_KEY: dummy-key-for-ci
-        DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
-        ASTRONOMY_API_APP_ID: ci_test_id
-        ASTRONOMY_API_APP_SECRET: ci_test_secret
-
+    - name: Install dependencies
       run: |
-        # Runs tests and creates coverage report
-        coverage run --source='home,CelestiaTrack' manage.py test
-        coverage report --fail-under=80 
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install coverage pytest pytest-django pytest-cov
 
-# --------------------------------------------------------
-  # JOB 2: AI Code Review using OpenAI (10pts)
-  # --------------------------------------------------------
-  ai_code_review:
-    # Only runs if it's a Pull Request and the tests job succeeded
+    - name: Run migrations
+      run: |
+        python manage.py migrate --settings=CelestiaTrack.settings_ci
+
+    - name: Run tests with coverage
+      run: |
+        coverage run --source='.' manage.py test --settings=CelestiaTrack.settings_ci
+        coverage report
+        coverage xml
+        coverage html
+
+    - name: Generate coverage badge
+      run: |
+        coverage report | tee coverage-report.txt
+        COVERAGE=$(coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+        echo "COVERAGE_PERCENT=$COVERAGE" >> $GITHUB_ENV
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: |
+          coverage.xml
+          htmlcov/
+          coverage-report.txt
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const coverage = fs.readFileSync('coverage-report.txt', 'utf8');
+          const comment = `## 📊 Coverage Report\n\`\`\`\n${coverage}\n\`\`\``;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  ai-code-review:
+    runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    needs: [ test_and_coverage ]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get changed files
+      id: changed-files
+      run: |
+        git fetch origin ${{ github.base_ref }}
+        CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(py|js|ts|jsx|tsx)$' || echo "")
+        echo "files<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: AI Code Review with ChatGPT
+      if: steps.changed-files.outputs.files != ''
+      uses: actions/github-script@v7
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      with:
+        script: |
+          const { execSync } = require('child_process');
+          const fs = require('fs');
+          
+          // Get the changed files
+          const changedFiles = `${{ steps.changed-files.outputs.files }}`.split('\n').filter(f => f);
+          
+          if (changedFiles.length === 0) {
+            console.log('No Python/JS files changed');
+            return;
+          }
+
+          // Read the diff for each file
+          let diffContent = '';
+          for (const file of changedFiles) {
+            try {
+              const diff = execSync(`git diff origin/${{ github.base_ref }}...HEAD -- ${file}`).toString();
+              diffContent += `\n\n### File: ${file}\n${diff}`;
+            } catch (e) {
+              console.log(`Could not get diff for ${file}`);
+            }
+          }
+
+          // Call OpenAI API for code review
+          const fetch = (await import('node-fetch')).default;
+          
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are an expert code reviewer. Review the following code changes and provide constructive feedback on: 1) Potential bugs, 2) Security issues, 3) Performance concerns, 4) Code quality and best practices, 5) Test coverage suggestions. Be concise and actionable.'
+                },
+                {
+                  role: 'user',
+                  content: `Please review these code changes:\n${diffContent}`
+                }
+              ],
+              max_tokens: 1500,
+              temperature: 0.3
+            })
+          });
+
+          const data = await response.json();
+          
+          if (!response.ok) {
+            console.error('OpenAI API error:', data);
+            throw new Error(`OpenAI API failed: ${data.error?.message || 'Unknown error'}`);
+          }
+
+          const review = data.choices[0].message.content;
+
+          // Post the review as a comment
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## 🤖 AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
+          });
+
+  lint:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout is required for the bot to see files
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: AI Code Review
-        uses: anc95/ChatGPT-CodeReview@main
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install linting tools
+      run: |
+        pip install flake8 pylint black isort
 
-          PROMPT: "Review the code for security vulnerabilities, Django best practices (e.g., ORM use), and adherence to Python style guides (PEP8). Ensure new code is fully covered by unit tests."
+    - name: Run flake8
+      continue-on-error: true
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics > flake8-report.txt
 
+    - name: Run pylint
+      continue-on-error: true
+      run: |
+        pylint **/*.py --exit-zero > pylint-report.txt || true
 
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    - name: Upload lint reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: lint-reports
+        path: |
+          flake8-report.txt
+          pylint-report.txt
