@@ -121,8 +121,6 @@ jobs:
           }
 
           // Call OpenAI API for code review
-          const fetch = (await import('node-fetch')).default;
-          
           const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
