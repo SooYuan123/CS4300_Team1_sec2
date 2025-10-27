@@ -42,6 +42,10 @@ jobs:
         coverage report
         coverage xml
 
+    - name: Check coverage threshold
+      run: |
+        coverage report --fail-under=80
+
     - name: Generate coverage badge
       run: |
         coverage report | tee coverage-report.txt
