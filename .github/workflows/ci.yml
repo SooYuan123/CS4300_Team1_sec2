@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   test-and-coverage:
     runs-on: ubuntu-latest
@@ -155,7 +160,7 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `## AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
+            body: `## 🤖 AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
           });
 
   lint:
