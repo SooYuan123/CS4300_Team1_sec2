@@ -22,7 +22,7 @@ jobs:
         fetch-depth: 0  # Fetch all history for better AI context
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
@@ -65,7 +65,7 @@ jobs:
         script: |
           const fs = require('fs');
           const coverage = fs.readFileSync('coverage-report.txt', 'utf8');
-          const comment = `## 📊 Coverage Report\n\`\`\`\n${coverage}\n\`\`\``;
+          const comment = `## Coverage Report\n\`\`\`\n${coverage}\n\`\`\``;
           
           github.rest.issues.createComment({
             issue_number: context.issue.number,
@@ -161,7 +161,7 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `## 🤖 AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
+            body: `## AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
           });
 
   lint:
@@ -172,7 +172,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
