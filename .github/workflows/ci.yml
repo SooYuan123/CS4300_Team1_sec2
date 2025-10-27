@@ -38,12 +38,13 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        coverage run --source='.' manage.py test --settings=CelestiaTrack.settings_ci
-        coverage report
+        # Only measure coverage for application code (home app and CelestiaTrack config)
+        coverage run --source='home,CelestiaTrack' manage.py test --settings=CelestiaTrack.settings_ci
         coverage xml
 
     - name: Check coverage threshold
       run: |
+        # Fail if coverage is below 80% to maintain code quality
         coverage report --fail-under=80
 
     - name: Generate coverage badge
@@ -67,7 +68,7 @@ jobs:
         script: |
           const fs = require('fs');
           const coverage = fs.readFileSync('coverage-report.txt', 'utf8');
-          const comment = `## 📊 Coverage Report\n\`\`\`\n${coverage}\n\`\`\``;
+          const comment = `## Coverage Report\n\`\`\`\n${coverage}\n\`\`\``;
           
           github.rest.issues.createComment({
             issue_number: context.issue.number,
@@ -85,7 +86,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 2  # Only fetch last 2 commits for diff
+        fetch-depth: 0  # Fetch full history to handle multiple commits in PR
 
     - name: Get changed files
       id: changed-files
@@ -163,7 +164,7 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `## 🤖 AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
+            body: `## AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
           });
 
   lint:
