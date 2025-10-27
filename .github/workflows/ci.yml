@@ -36,7 +36,6 @@ jobs:
         coverage run --source='.' manage.py test --settings=CelestiaTrack.settings_ci
         coverage report
         coverage xml
-        coverage html
 
     - name: Generate coverage badge
       run: |
@@ -45,12 +44,11 @@ jobs:
         echo "COVERAGE_PERCENT=$COVERAGE" >> $GITHUB_ENV
 
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: |
           coverage.xml
-          htmlcov/
           coverage-report.txt
 
     - name: Comment coverage on PR
@@ -157,7 +155,7 @@ jobs:
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `## 🤖 AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
+            body: `## AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
           });
 
   lint:
@@ -188,7 +186,7 @@ jobs:
         pylint **/*.py --exit-zero > pylint-report.txt || true
 
     - name: Upload lint reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: lint-reports
         path: |
