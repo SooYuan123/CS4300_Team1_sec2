@@ -1,12 +1,60 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from .utils import fetch_astronomical_events
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone, timedelta
+import requests
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
-def index(request):
-    return render(request, 'index.html')
+NASA_API_KEY = os.getenv("NASA_API_KEY")
 
+def gallery(request):
+    nasa_url = "https://images-api.nasa.gov/search?q=space&media_type=image"
+    images = []
+
+    try:
+        response = requests.get(nasa_url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        print(data.keys())
+
+        # Safely get to the list of items in NASA's response
+        items = data.get("collection", {}).get("items", [])
+        
+        for item in items[:40]:  # limit to # of images
+            links = item.get("links", [])
+            data_block = item.get("data", [])
+            if not links or not data_block:
+                continue
+
+            link = links[0].get("href")
+            title = data_block[0].get("title", "NASA Image")
+            description = data_block[0].get("description", "")
+            if link:
+                images.append({
+                    "src": link,
+                    "title": title,
+                    "desc": description,
+                })
+
+    except Exception as e:
+        # print the error (for development)
+        print("NASA API fetch failed:", e)
+
+        # Fallback static images
+        images = [
+            {"src": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80"},
+            {"src": "https://images.unsplash.com/photo-1529788295308-1eace6f67388?auto=format&fit=crop&w=1200&q=80"},
+            {"src": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80"},
+            {"src": "https://images.unsplash.com/photo-1706562018171-7fefa57d37af?auto=format&fit=crop&w=1200&q=80"},
+            {"src": "https://images.unsplash.com/photo-1706211306896-92c4abb298d7?auto=format&fit=crop&w=1200&q=80"},
+            {"src": "https://images.unsplash.com/photo-1707058665549-c2a27e3fad45?auto=format&fit=crop&w=1200&q=80"},
+        ]
+
+    return render(request, "gallery.html", {"images": images})
 
 def events_list(request):
     """Render the events page with first 20 events"""
@@ -141,8 +189,6 @@ def fetch_all_events(latitude, longitude):
     )
     return events_data
 
-
-
 def _parse_iso(dt_str: str):
     if not dt_str:
         return None
@@ -152,3 +198,43 @@ def _parse_iso(dt_str: str):
         return datetime.fromisoformat(val)
     except Exception:
         return None
+
+def get_apod_for_date(d):
+    apod_base_url = "https://api.nasa.gov/planetary/apod"
+    """Fetch APOD for a specific date."""
+    if not NASA_API_KEY:
+        print("NASA_API_KEY not set.")
+        return None
+    try:
+        params = {"api_key": NASA_API_KEY, "date": d.isoformat()}
+        resp = requests.get(apod_base_url, params=params, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            return data
+        else:
+            print(f"NASA API returned status {resp.status_code} for date {d.isoformat()}")
+    except requests.RequestException as e:
+        print("NASA API request failed:", e)
+    return None
+
+def find_most_recent_apod(max_days_back=30):
+    today = date.today()
+    for i in range(max_days_back):
+        d = today - timedelta(days=i)
+        data = get_apod_for_date(d)
+        if data:
+            return data
+    return None
+
+def index(request):
+    """Render index page with APOD."""
+    apod = None
+    try:
+        apod = find_most_recent_apod()
+    except Exception as e:
+        print("Error fetching APOD:", e)
+
+    context = {
+        "apod": apod  # Could be None if fetch failed
+    }
+    return render(request, "index.html", context)

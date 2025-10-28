@@ -17,12 +17,8 @@
   
 </head>
 
+{% include 'header.html' %}
 <body>
-  <!-- Header -->
-  <header>
-    <h1>CelestiaTrack</h1>
-  </header>
-
   <!-- Main Hero Section -->
   <section class="hero">
     <h2>Chart Your Journey Among the Stars</h2>
@@ -32,28 +28,67 @@
     </p>
     <a href="events/" class="btn btn-glow mt-3">Start Exploring</a>
   </section>
-    <section class="hero">
-        <div class="container">
-            <h2>Discover the Universe</h2>
-            <p>
-                CelestiaTrack brings you the wonders of space - from meteor showers to auroras - all in one platform.
-            </p>
-            <div class="row justify-content-center">
-                <div class="col-md-4 mb-4">
-                    <img src="https://images.unsplash.com/photo-1599218419176-0daa21523249?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                        class="img-fluid rounded shadow-lg" alt="Meteor Shower">
-                </div>
-                <div class="col-md-4 mb-4">
-                    <img src="https://images.unsplash.com/photo-1529788295308-1eace6f67388?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                        class="img-fluid rounded shadow-lg" alt="Eclipse">
-                </div>
-                <div class="col-md-4 mb-4">
-                    <img src="https://images.unsplash.com/photo-1531366936337-7c912a4589a7?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                        class="img-fluid rounded shadow-lg" alt="Aurora Borealis">
-                </div>
-            </div>
+  <section class="hero">
+      <div class="container">
+          <h2>Discover the Universe</h2>
+          <p>
+              CelestiaTrack brings you the wonders of space - from meteor showers to auroras - all in one platform.
+          </p>
+          <!--Leave as first 3 images of index page, below paralax effect script relies on this-->
+          <div class="row justify-content-center">
+              <div class="col-md-4 mb-4">
+                  <img src="https://images.unsplash.com/photo-1599218419176-0daa21523249?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                      class="img-fluid rounded shadow-lg" alt="Meteor Shower">
+              </div>
+              <div class="col-md-4 mb-4">
+                  <img src="https://images.unsplash.com/photo-1529788295308-1eace6f67388?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                      class="img-fluid rounded shadow-lg" alt="Eclipse">
+              </div>
+              <div class="col-md-4 mb-4">
+                  <img src="https://images.unsplash.com/photo-1531366936337-7c912a4589a7?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                      class="img-fluid rounded shadow-lg" alt="Aurora Borealis">
+              </div>
+          </div>
+      </div>
+  </section>
+  
+  <section class="apod-section text-center my-5 hero">
+    {% if apod %}
+      <h2>{{ apod.title }}</h2>
+      <p>{{ apod.date }}</p>
+      {% if apod.media_type == "image" %}
+        <img src="{{ apod.url }}" alt="{{ apod.title }}" class="img-fluid rounded shadow-lg">
+      {% elif apod.media_type == "video" %}
+        <div class="ratio ratio-16x9">
+          <iframe src="{{ apod.url }}" title="{{ apod.title }}" allowfullscreen></iframe>
         </div>
-    </section>
+      {% endif %}
+      <p class="mt-2">{{ apod.explanation }}</p>
+    {% else %}
+      <p>Could not load NASA’s Astronomy Picture of the Day at this time. Please try again later.</p>
+    {% endif %}
+  </section>
+  
+  
+  <section class="carousel-section bg-transparent py-3 border-bottom">
+    <!-- Space Image Carousel -->
+    <div id="spaceCarousel" class="carousel slide" data-bs-ride="carousel">
+      <div class="carousel-inner rounded shadow-lg" id="carousel-inner">
+        <!-- Fallback images inserted dynamically -->
+      </div>
+
+      <!-- Controls -->
+      <button class="carousel-control-prev" type="button" data-bs-target="#spaceCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon"></span>
+        <span class="visually-hidden">Previous</span>
+      </button>
+      <button class="carousel-control-next" type="button" data-bs-target="#spaceCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon"></span>
+        <span class="visually-hidden">Next</span>
+      </button>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer>
     <p>CelestiaTrack - Guided by the light of discovery.</p>
@@ -61,5 +96,89 @@
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async function() {
+    const carouselInner = document.getElementById("carousel-inner");
+    const carouselElement = document.getElementById("spaceCarousel");
+
+    const fallbackImages = [
+      "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1706562018171-7fefa57d37af?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1706211306896-92c4abb298d7?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1707058665549-c2a27e3fad45?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80"
+    ];
+
+    try {
+      const nasaURL = "https://images-api.nasa.gov/search?q=space&media_type=image";
+      const response = await fetch(nasaURL, { cache: "no-store", signal: AbortSignal.timeout(4000) });
+      if (!response.ok) throw new Error("NASA API unreachable");
+
+      const data = await response.json();
+      const items = data.collection.items.sort(() => 0.5 - Math.random()).slice(0, 5);
+
+      items.forEach((item, index) => {
+        const imgSrc = item.links && item.links[0] ? item.links[0].href : null;
+        if (imgSrc) {
+          carouselInner.insertAdjacentHTML(
+            "beforeend",
+            `<div class="carousel-item ${index === 0 ? "active" : ""}">
+              <img src="${imgSrc}" class="d-block w-100 carousel-img" alt="NASA Space Image">
+            </div>`
+          );
+        }
+      });
+
+      if (!carouselInner.children.length) throw new Error("No valid NASA images found");
+
+    } catch (error) {
+      console.warn("Using fallback images:", error.message);
+      fallbackImages.forEach((img, index) => {
+        carouselInner.insertAdjacentHTML(
+          "beforeend",
+          `<div class="carousel-item ${index === 0 ? "active" : ""}">
+            <img src="${img}" class="d-block w-100 carousel-img img-fluid" alt="Space Image Fallback">
+          </div>`
+        );
+      });
+    }
+
+    // Wait a tick to ensure images render, then init carousel
+    setTimeout(() => {
+      new bootstrap.Carousel(carouselElement, { interval: 5000, ride: "carousel" });
+    }, 200);
+  });
+
+  </script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const imgs = document.querySelectorAll(".hero img");
+  
+    imgs.forEach((img, index) => {
+      if (index < 3) { // only first three images
+        img.classList.add("interactive-img");
+  
+        img.addEventListener("mousemove", (e) => {
+          const rect = img.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          const moveX = (x - centerX) / 20; // smaller divisor = more movement
+          const moveY = (y - centerY) / 20;
+          img.style.transform = `scale(1.05) rotateX(${ -moveY }deg) rotateY(${ moveX }deg)`;
+        });
+  
+        img.addEventListener("mouseleave", () => {
+          img.style.transform = "scale(1)";
+        });
+      }
+    });
+  });
+  </script>
+  
 </body>
 </html>
