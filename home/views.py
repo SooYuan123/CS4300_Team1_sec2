@@ -1,7 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from .utils import fetch_astronomical_events
 from datetime import datetime, timezone
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
+from django.contrib.auth import login as auth_login
 
 
 def index(request):
@@ -152,3 +155,17 @@ def _parse_iso(dt_str: str):
         return datetime.fromisoformat(val)
     except Exception:
         return None
+    
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, 'Account created! You are now logged in.')
+            auth_login(request, user)
+            return redirect('index')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = UserCreationForm()
+    return render(request, 'auth/register.html', {'form': form})
