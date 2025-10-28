@@ -26,12 +26,40 @@
           <div class="col-12 col-md-6 col-lg-4">
             <div class="card bg-secondary text-light shadow-lg h-100">
               <div class="card-body">
-                <h5 class="card-title">{{ e.body|title }}</h5>
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h5 class="card-title mb-0">{{ e.body|title }}</h5>
+                  {% if e.highlights.source == "open_meteo" %}
+                    <span class="badge bg-info me-2">Open-Meteo</span>
+                  {% elif e.highlights.source == "ams_meteors" %}
+                    <span class="badge bg-warning me-2">AMS Meteors</span>
+                  {% endif %}
+                </div>
                 <h6 class="card-subtitle mb-2 text-warning">{{ e.type|title }}</h6>
+                
+                {% if e.highlights.category == "twilight" %}
+                  <div class="alert alert-info py-2 mb-3">
+                    <small><i class="bi bi-sun"></i> {{ e.highlights.description|default:"Astronomical twilight event" }}</small>
+                  </div>
+                {% elif e.highlights.category == "meteor_shower" %}
+                  <div class="alert alert-success py-2 mb-3">
+                    <small><i class="bi bi-star"></i> Meteor Count: {{ e.highlights.meteor_count|default:"Unknown" }}</small>
+                    <br><small>Visibility: {{ e.highlights.visibility|default:"Unknown" }}</small>
+                  </div>
+                {% elif e.highlights.category == "fireball" %}
+                  <div class="alert alert-danger py-2 mb-3">
+                    <small><i class="bi bi-fire"></i> Location: {{ e.highlights.location|default:"Unknown" }}</small>
+                    <br><small>Brightness: {{ e.highlights.brightness|default:"Unknown" }}</small>
+                  </div>
+                {% endif %}
+                
                 <ul class="list-unstyled mt-3 mb-4">
                   <li><strong>Peak:</strong> {{ e.peak }}</li>
-                  <li><strong>Rise:</strong> {{ e.rise }}</li>
-                  <li><strong>Set:</strong> {{ e.set }}</li>
+                  {% if e.rise %}
+                    <li><strong>Rise:</strong> {{ e.rise }}</li>
+                  {% endif %}
+                  {% if e.set %}
+                    <li><strong>Set:</strong> {{ e.set }}</li>
+                  {% endif %}
                   {% if e.obscuration %}
                     <li><strong>Obscuration:</strong> {{ e.obscuration }}</li>
                   {% endif %}
@@ -84,16 +112,58 @@
     const maxRetries = 3;
 
     function createEventCard(event) {
+      // Determine event source and category for styling
+      const source = event.highlights?.source || 'astronomy_api';
+      const category = event.highlights?.category || 'celestial_body';
+      
+      // Create source badge
+      let sourceBadge = '';
+      if (source === 'open_meteo') {
+        sourceBadge = '<span class="badge bg-info me-2">Open-Meteo</span>';
+      } else if (source === 'ams_meteors') {
+        sourceBadge = '<span class="badge bg-warning me-2">AMS Meteors</span>';
+      }
+      
+      // Create category-specific content
+      let categoryContent = '';
+      if (category === 'twilight') {
+        categoryContent = `
+          <div class="alert alert-info py-2 mb-3">
+            <small><i class="bi bi-sun"></i> ${event.highlights?.description || 'Astronomical twilight event'}</small>
+          </div>
+        `;
+      } else if (category === 'meteor_shower') {
+        categoryContent = `
+          <div class="alert alert-success py-2 mb-3">
+            <small><i class="bi bi-star"></i> Meteor Count: ${event.highlights?.meteor_count || 'Unknown'}</small>
+            <br><small>Visibility: ${event.highlights?.visibility || 'Unknown'}</small>
+          </div>
+        `;
+      } else if (category === 'fireball') {
+        categoryContent = `
+          <div class="alert alert-danger py-2 mb-3">
+            <small><i class="bi bi-fire"></i> Location: ${event.highlights?.location || 'Unknown'}</small>
+            <br><small>Brightness: ${event.highlights?.brightness || 'Unknown'}</small>
+          </div>
+        `;
+      }
+      
       return `
         <div class="col-12 col-md-6 col-lg-4">
           <div class="card bg-secondary text-light shadow-lg h-100">
             <div class="card-body">
-              <h5 class="card-title">${event.body.charAt(0).toUpperCase() + event.body.slice(1)}</h5>
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title mb-0">${event.body.charAt(0).toUpperCase() + event.body.slice(1)}</h5>
+                ${sourceBadge}
+              </div>
               <h6 class="card-subtitle mb-2 text-warning">${event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'N/A'}</h6>
+              
+              ${categoryContent}
+              
               <ul class="list-unstyled mt-3 mb-4">
                 <li><strong>Peak:</strong> ${event.peak || 'N/A'}</li>
-                <li><strong>Rise:</strong> ${event.rise || 'N/A'}</li>
-                <li><strong>Set:</strong> ${event.set || 'N/A'}</li>
+                ${event.rise ? `<li><strong>Rise:</strong> ${event.rise}</li>` : ''}
+                ${event.set ? `<li><strong>Set:</strong> ${event.set}</li>` : ''}
                 ${event.obscuration ? `<li><strong>Obscuration:</strong> ${event.obscuration}</li>` : ''}
               </ul>
               <details class="mt-3">

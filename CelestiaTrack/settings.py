@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 ASTRONOMY_API_APP_ID = config('ASTRONOMY_API_APP_ID', default='')
 ASTRONOMY_API_APP_SECRET = config('ASTRONOMY_API_APP_SECRET', default='')
+AMS_METEORS_API_KEY = config('AMS_METEORS_API_KEY', default='')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/

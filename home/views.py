@@ -1,7 +1,13 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from .utils import fetch_astronomical_events
+from .utils import (
+    fetch_astronomical_events, 
+    fetch_twilight_events, 
+    fetch_meteor_shower_events, 
+    fetch_fireball_events
+)
 from datetime import datetime
+from django.conf import settings
 
 def index(request):
     return render(request, 'index.html')
@@ -64,10 +70,20 @@ def events_api(request):
         })
 
 def fetch_all_events(latitude, longitude):
-    """Fetch events from all major celestial bodies and sort chronologically"""
-    celestial_bodies = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
+    """
+    Fetch events from all available sources and sort chronologically
+    
+    Sources:
+    - Astronomy API: Celestial body events (sun, moon, planets)
+    - Open-Meteo API: Astronomical twilight events
+    - AMS Meteors API: Meteor showers and fireball sightings (if API key available)
+    """
     events_data = []
-
+    
+    # 1. Fetch celestial body events from Astronomy API
+    print("Fetching celestial body events from Astronomy API...")
+    celestial_bodies = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
+    
     for body in celestial_bodies:
         try:
             print(f"Fetching events for {body}...")
@@ -88,8 +104,44 @@ def fetch_all_events(latitude, longitude):
                     events_data.append(data)
         except Exception as e:
             print(f"Error fetching {body} events: {e}")
+    
+    # 2. Fetch twilight events from Open-Meteo API
+    print("Fetching twilight events from Open-Meteo API...")
+    try:
+        twilight_events = fetch_twilight_events(latitude, longitude)
+        events_data.extend(twilight_events)
+        print(f"Added {len(twilight_events)} twilight events")
+    except Exception as e:
+        print(f"Error fetching twilight events: {e}")
+    
+    # 3. Fetch meteor shower events from AMS Meteors API (if API key available)
+    ams_api_key = getattr(settings, 'AMS_METEORS_API_KEY', '')
+    if ams_api_key:
+        print("Fetching meteor shower events from AMS Meteors API...")
+        try:
+            meteor_events = fetch_meteor_shower_events(api_key=ams_api_key)
+            events_data.extend(meteor_events)
+            print(f"Added {len(meteor_events)} meteor shower events")
+        except Exception as e:
+            print(f"Error fetching meteor shower events: {e}")
+        
+        # 4. Fetch fireball events from AMS Meteors API
+        print("Fetching fireball events from AMS Meteors API...")
+        try:
+            fireball_events = fetch_fireball_events(
+                api_key=ams_api_key, 
+                latitude=latitude, 
+                longitude=longitude
+            )
+            events_data.extend(fireball_events)
+            print(f"Added {len(fireball_events)} fireball events")
+        except Exception as e:
+            print(f"Error fetching fireball events: {e}")
+    else:
+        print("AMS Meteors API key not configured, skipping meteor and fireball data")
 
-    print(f"Total events fetched: {len(events_data)}")
+    print(f"Total events fetched from all sources: {len(events_data)}")
+    
     # Sort by peak date, using datetime.max for events without peak dates
     events_data = sorted(events_data, key=lambda e: e["peak"] or datetime.max.isoformat())
     return events_data
