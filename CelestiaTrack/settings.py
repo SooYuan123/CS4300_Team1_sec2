@@ -153,7 +153,7 @@ USE_TZ = True
 # Tell Django where to look for static files to serve
 STATIC_ROOT = os.path.join(BASE_DIR, 'home/static/')
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "static"),]
+STATICFILES_DIRS = [os.path.join(BASE_DIR),]
 
 
 # Default primary key field type
