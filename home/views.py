@@ -8,12 +8,14 @@ from datetime import date, datetime, timezone, timedelta
 import requests
 from dotenv import load_dotenv
 import os
+from django.contrib.auth.decorators import login_required
 
 load_dotenv()
 
 
 NASA_API_KEY = os.getenv("NASA_API_KEY")
 
+@login_required
 def gallery(request):
     nasa_url = "https://images-api.nasa.gov/search?q=space&media_type=image"
     images = []
