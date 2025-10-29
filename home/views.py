@@ -1,4 +1,7 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
+from django.contrib.auth import login as auth_login
 from django.http import JsonResponse
 from .utils import fetch_astronomical_events
 from datetime import date, datetime, timezone, timedelta
@@ -218,7 +221,11 @@ def get_apod_for_date(d):
     return None
 
 def find_most_recent_apod(max_days_back=30):
-    today = date.today()
+    # today = date.today()
+
+    # Use actual date
+    from datetime import date as date_class
+    today = date_class(2025, 10, 1)  # Actual date
     for i in range(max_days_back):
         d = today - timedelta(days=i)
         data = get_apod_for_date(d)
@@ -238,3 +245,17 @@ def index(request):
         "apod": apod  # Could be None if fetch failed
     }
     return render(request, "index.html", context)
+
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, 'Account created! You are now logged in.')
+            auth_login(request, user)
+            return redirect('index')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = UserCreationForm()
+    return render(request, 'auth/register.html', {'form': form})
