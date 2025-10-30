@@ -16,7 +16,6 @@ def get_auth_header():
     token = base64.b64encode(f"{app_id}:{app_secret}".encode()).decode()
     return {"Authorization": f"Basic {token}"}
 
-
 def fetch_astronomical_events(body, latitude, longitude, elevation=0, from_date=None, to_date=None):
     today = datetime.utcnow().date()
 
