@@ -2,7 +2,7 @@ name: CD (Deploy to Render on merge)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ CD-Pipeline ]
 
 permissions:
   contents: read
