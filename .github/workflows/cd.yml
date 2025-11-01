@@ -2,7 +2,8 @@ name: CD (Deploy to Render on merge)
 
 on:
   push:
-    branches: [ CD-Pipeline ]
+    branches: [ main, CD-Pipeline ]
+   workflow_dispatch:
 
 permissions:
   contents: read
