@@ -1,4 +1,5 @@
 # CelestiaTrack
+# *Temporary CD test comment*
 
 A Django-based web app that fetches, processes, and displays upcoming astronomical events using the AstronomyAPI.
 Each event is displayed in a clean, responsive Bootstrap layout with details such as rise/set times, peak date, and additional highlights.
