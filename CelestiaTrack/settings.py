@@ -23,6 +23,7 @@ DEBUG = config('DEBUG', default=False, cast=bool) # Temporarily set this to Fals
 
 ASTRONOMY_API_APP_ID = config('ASTRONOMY_API_APP_ID', default='')
 ASTRONOMY_API_APP_SECRET = config('ASTRONOMY_API_APP_SECRET', default='')
+SSOD_APP_ID = config('SSOD_APP_ID', default='')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/

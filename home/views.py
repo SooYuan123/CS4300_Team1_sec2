@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.http import JsonResponse
-from .utils import fetch_astronomical_events
+from .utils import fetch_astronomical_events, get_celestial_bodies_with_visibility
 from datetime import date, datetime, timezone, timedelta
 import requests
 from dotenv import load_dotenv
@@ -62,8 +62,8 @@ def gallery(request):
     return render(request, "gallery.html", {"images": images})
 
 def events_list(request):
-    """Render the events page with first 20 events"""
-    latitude, longitude = "38.775867", "-84.39733"
+    """Render the events page with first 20 events and celestial body positions"""
+    latitude, longitude = "38.8339", "-104.8214" # Colorado Springs, CO
 
     try:
         events_data = fetch_all_events(latitude, longitude)
@@ -75,15 +75,30 @@ def events_list(request):
 
         print(f"DEBUG: Initial events: {len(initial_events)}, has_more: {has_more}")
 
+        # Fetch Celestial Body Positions
+        celestial_bodies = []
+        try:
+            celestial_bodies = get_celestial_bodies_with_visibility(
+                latitude=float(latitude),
+                longitude=float(longitude)
+            )
+            print(f"DEBUG: Fetched {len(celestial_bodies)} celestial bodies")
+        except Exception as e:
+            print(f"ERROR fetching celestial bodies: {e}")
+
         return render(request, "events_list.html", {
             "events": initial_events,
-            "has_more": has_more
+            "has_more": has_more,
+            "celestial_bodies": celestial_bodies,
+            "loaction": "Colorado Springs, CO"
         })
     except Exception as e:
         print(f"ERROR in events_list: {e}")
         return render(request, "events_list.html", {
             "events": [],
-            "has_more": False
+            "has_more": False,
+            "celestial_bodies": [],
+            "location": "Colorado Springs, CO"
         })
 
 def _earliest_peak_from_events(events):
@@ -110,7 +125,7 @@ def events_api(request):
     try:
         offset = int(request.GET.get("offset", 0))
         limit = int(request.GET.get("limit", 20))
-        latitude, longitude = "38.775867", "-84.39733"
+        latitude, longitude = "38.8339", "-104.8214" # Colorado Springs, CO
 
         all_events = fetch_all_events(latitude, longitude)
         total = len(all_events)
