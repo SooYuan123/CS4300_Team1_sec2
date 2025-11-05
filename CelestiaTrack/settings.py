@@ -35,11 +35,16 @@ SECRET_KEY = config('SECRETKEY', default='django-insecure-j78f(bqzq4)^o!%&8^=iin
 # CRITICAL FIX: Ensure DEBUG is False in Production/Render
 DEBUG = config('DEBUG', default=False, cast=bool)
 
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
 # Render URL will be automatically added here
 # The '*' allows all traffic to the Render URL once DEBUG is False
 ALLOWED_HOSTS = [
     '127.0.0.1',
     '0.0.0.0',
+    'localhost',
+    '.onrender.com',
     # Use config() to load the Render hostname or default to accepting all
     config('RENDER_EXTERNAL_HOSTNAME', default='*')
 ]
