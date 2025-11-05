@@ -1,40 +1,174 @@
-name: Django CI/CD Pipeline
+name: CI Pipeline with AI Review
 
-# Triggers the workflow on every push and Pull Request (PR) to the main branch
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
-  # ----------------------------------------------------
-  # JOB 1: Test Execution & Coverage Report
-  # ----------------------------------------------------
-  test_and_coverage:
+  test-and-coverage:
     runs-on: ubuntu-latest
 
-    # Use a service container for a clean database environment
-    services:
-      postgres:
-        image: postgres:15-alpine
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        env:
-          POSTGRES_USER: ci_user
-          POSTGRES_PASSWORD: ci_password
-          POSTGRES_DB: ci_db
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for better AI context
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install coverage pytest pytest-django pytest-cov
+
+    - name: Run migrations
+      run: |
+        python manage.py migrate --settings=CelestiaTrack.settings_ci
+
+    - name: Run tests with coverage
+      run: |
+        # Measure coverage for application code only (excludes migrations, venv, etc.)
+        # Add more apps here as your project grows: --source='home,CelestiaTrack,newapp'
+        coverage run --source='home,CelestiaTrack' manage.py test --settings=CelestiaTrack.settings_ci
+        coverage xml
+
+    - name: Check coverage threshold
+      run: |
+        # Fail if coverage is below threshold to maintain code quality
+        # Default is 80%, can be configured by setting COVERAGE_THRESHOLD env var
+        coverage report | tee coverage-report.txt
+        coverage report --fail-under=${COVERAGE_THRESHOLD:-80}
+
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          coverage.xml
+          coverage-report.txt
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const coverage = fs.readFileSync('coverage-report.txt', 'utf8');
+          const comment = `## Coverage Report\n\`\`\`\n${coverage}\n\`\`\``;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  ai-code-review:
+    runs-on: ubuntu-latest
+    needs: [test-and-coverage]  # Only run if tests pass
+    if: github.event_name == 'pull_request'
 
     steps:
-    - name: Checkout Code
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history to handle multiple commits in PR
+
+    - name: Get changed files
+      id: changed-files
+      run: |
+        git fetch origin ${{ github.base_ref }}
+        CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || echo "")
+        echo "files<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: AI Code Review with ChatGPT
+      if: steps.changed-files.outputs.files != ''
+      uses: actions/github-script@v7
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Securely stored in GitHub Secrets
+      with:
+        script: |
+          const { execSync } = require('child_process');
+          const fs = require('fs');
+          
+          // Get the changed files
+          const changedFiles = `${{ steps.changed-files.outputs.files }}`.split('\n').filter(f => f);
+          
+          if (changedFiles.length === 0) {
+            console.log('No Python/JS files changed');
+            return;
+          }
+
+          // Read the diff for each file
+          let diffContent = '';
+          for (const file of changedFiles) {
+            try {
+              const diff = execSync(`git diff origin/${{ github.base_ref }}...HEAD -- ${file}`).toString();
+              diffContent += `\n\n### File: ${file}\n${diff}`;
+            } catch (e) {
+              console.log(`Could not get diff for ${file}`);
+            }
+          }
+
+          // Call OpenAI API for code review
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are an expert code reviewer. Review the following code changes and provide constructive feedback on: 1) Potential bugs, 2) Security issues, 3) Performance concerns, 4) Code quality and best practices, 5) Test coverage suggestions. Be concise and actionable.'
+                },
+                {
+                  role: 'user',
+                  content: `Please review these code changes:\n${diffContent}`
+                }
+              ],
+              max_tokens: 1500,
+              temperature: 0.3
+            })
+          });
+
+          const data = await response.json();
+          
+          if (!response.ok) {
+            console.error('OpenAI API error:', data);
+            throw new Error(`OpenAI API failed: ${data.error?.message || 'Unknown error'}`);
+          }
+
+          const review = data.choices[0].message.content;
+
+          // Post the review as a comment
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## AI Code Review\n\n${review}\n\n---\n*Powered by ChatGPT*`
+          });
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Set up Python
@@ -42,50 +176,25 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install Dependencies
-      run: pip install -r requirements.txt
-
-    - name: Run Database Migrations
-      env:
-        SECRET_KEY: dummy-key-for-ci
-        DJANGO_SETTINGS_MODULE: CelestiaTrack.settings
-        # Pass connection string for the CI service container
-        DATABASE_URL: postgres://ci_user:ci_password@postgres:5432/ci_db
-      run: python manage.py migrate
-
-    - name: Run Tests & Report Coverage
-      env:
-        SECRET_KEY: dummy-key-for-ci
-        DJANGO_SETTINGS_MODULE: CelestiaTrack.settings
-        DATABASE_URL: postgres://ci_user:ci_password@postgres:5432/ci_db
+    - name: Install linting tools
       run: |
-        # Runs tests and creates coverage report
-        coverage run --source='home,CelestiaTrack' manage.py test
-        # Reports coverage metrics in console (5pts requirement)
-        coverage report --fail-under=80 
+        pip install flake8 pylint black isort
 
-# --------------------------------------------------------
-  # JOB 2: AI Code Review using OpenAI (10pts)
-  # --------------------------------------------------------
-  ai_code_review:
-    # Only runs if it's a Pull Request and the tests job succeeded
-    if: github.event_name == 'pull_request'
-    needs: [ test_and_coverage ]
-    runs-on: ubuntu-latest
+    - name: Run flake8
+      continue-on-error: true
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics > flake8-report.txt
 
-    steps:
-      # 1. Checkout is required for the bot to see files
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    - name: Run pylint
+      continue-on-error: true
+      run: |
+        pylint **/*.py --exit-zero > pylint-report.txt || true
 
-      - name: AI Code Review
-        uses: anc95/ChatGPT-CodeReview@main
-
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-          PROMPT: "Review the code for security vulnerabilities, Django best practices (e.g., ORM use), and adherence to Python style guides (PEP8). Ensure new code is fully covered by unit tests."
-
-
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    - name: Upload lint reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-reports
+        path: |
+          flake8-report.txt
+          pylint-report.txt

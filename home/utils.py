@@ -3,7 +3,7 @@ import base64
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
-from requests.exceptions import HTTPError
+from requests.exceptions import HTTPError, RequestException
 from django.conf import settings
 
 load_dotenv()
@@ -13,161 +13,149 @@ ASTRONOMY_API_BASE = "https://api.astronomyapi.com/api/v2/bodies/events"
 OPEN_METEO_API_BASE = "https://api.open-meteo.com/v1/forecast"
 AMS_METEORS_API_BASE = "https://www.amsmeteors.org/members/api/open_api"
 
-ASTRONOMY_API_APP_ID = os.getenv("ASTRONOMY_API_APP_ID")
-ASTRONOMY_API_APP_SECRET = os.getenv("ASTRONOMY_API_APP_SECRET")
-AMS_METEORS_API_KEY = getattr(settings, 'AMS_METEORS_API_KEY', '')
+# Defaults/timeouts
+HTTP_TIMEOUT = 15  # seconds
+
+# Settings/Env
+ASTRONOMY_API_APP_ID = getattr(settings, "ASTRONOMY_API_APP_ID", None) or os.getenv("ASTRONOMY_API_APP_ID")
+ASTRONOMY_API_APP_SECRET = getattr(settings, "ASTRONOMY_API_APP_SECRET", None) or os.getenv("ASTRONOMY_API_APP_SECRET")
+AMS_METEORS_API_KEY = getattr(settings, "AMS_METEORS_API_KEY", "")
+
+
+def _require_astronomy_api_creds():
+    if not ASTRONOMY_API_APP_ID or not ASTRONOMY_API_APP_SECRET:
+        raise RuntimeError("Astronomy API credentials missing (ASTRONOMY_API_APP_ID/ASTRONOMY_API_APP_SECRET).")
+
 
 def get_auth_header():
-    auth_string = base64.b64encode(f"{ASTRONOMY_API_APP_ID}:{ASTRONOMY_API_APP_SECRET}".encode()).decode()
-    return {"Authorization": f"Basic {auth_string}"}
+    # Callers that talk to the Astronomy API should ensure creds exist
+    token = base64.b64encode(f"{ASTRONOMY_API_APP_ID}:{ASTRONOMY_API_APP_SECRET}".encode()).decode()
+    return {"Authorization": f"Basic {token}"}
+
 
 def fetch_astronomical_events(body, latitude, longitude, elevation=0, from_date=None, to_date=None):
-    """Fetch astronomical events from Astronomy API for celestial bodies"""
+    """Fetch astronomical events from Astronomy API for a celestial body; returns rows[] or []"""
+    _require_astronomy_api_creds()
     today = datetime.now(timezone.utc).date()
-    
+
     # Default window: past 365 days to next ~3 years
-    if not to_date:
-        to_date = today + timedelta(days=1095)  # ~3 years ahead
-    if not from_date:
-        from_date = today - timedelta(days=365)  # past year
+    to_date = to_date or (today + timedelta(days=1095))
+    from_date = from_date or (today - timedelta(days=365))
 
     params = {
         "latitude": latitude,
         "longitude": longitude,
         "elevation": elevation,
-        "from_date": from_date,
-        "to_date": to_date,
+        "from_date": str(from_date),
+        "to_date": str(to_date),
         "time": "00:00:00",
-        "output": "rows"
+        "output": "rows",
     }
-    params["from_date"] = str(from_date)
-    params["to_date"] = str(to_date)
 
-    response = requests.get(f"{ASTRONOMY_API_BASE}/{body}", headers=get_auth_header(), params=params)
-    response.raise_for_status()
-    return response.json()["data"]["rows"]
+    try:
+        resp = requests.get(f"{ASTRONOMY_API_BASE}/{body}", headers=get_auth_header(), params=params, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json() or {}
+        return ((data.get("data") or {}).get("rows")) or []
+    except (HTTPError, RequestException, ValueError) as e:
+        # Let caller decide how to handle a failed body fetch
+        print(f"Error fetching AstronomyAPI {body}: {e}")
+        raise
 
 
 def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
     """
-    Fetch astronomical twilight events from Open-Meteo API
-    
-    Args:
-        latitude (str): Latitude coordinate
-        longitude (str): Longitude coordinate
-        from_date (date): Start date for data range
-        to_date (date): End date for data range
-    
-    Returns:
-        list: Standardized event data for twilight events
+    Fetch astronomical twilight events from Open-Meteo API and return standardized events.
     """
     try:
         today = datetime.now(timezone.utc).date()
-        
-        # Default window: past 365 days to next ~3 years
-        if not to_date:
-            to_date = today + timedelta(days=1095)
-        if not from_date:
-            from_date = today - timedelta(days=365)
-        
+        to_date = to_date or (today + timedelta(days=1095))
+        from_date = from_date or (today - timedelta(days=365))
+
         params = {
             "latitude": float(latitude),
             "longitude": float(longitude),
             "daily": "sunrise,sunset,astronomical_twilight_start,astronomical_twilight_end",
             "start_date": str(from_date),
             "end_date": str(to_date),
-            "timezone": "auto"
+            "timezone": "auto",
         }
-        
-        response = requests.get(OPEN_METEO_API_BASE, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
+
+        resp = requests.get(OPEN_METEO_API_BASE, params=params, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json() or {}
+
         events = []
-        daily_data = data.get("daily", {})
-        times = daily_data.get("time", [])
-        
+        daily_data = data.get("daily") or {}
+        times = daily_data.get("time") or []
+
+        ats = daily_data.get("astronomical_twilight_start") or []
+        ate = daily_data.get("astronomical_twilight_end") or []
+
         for i, date_str in enumerate(times):
-            # Create twilight start event
-            twilight_start = daily_data.get("astronomical_twilight_start", [])
-            if i < len(twilight_start) and twilight_start[i]:
+            if i < len(ats) and ats[i]:
                 events.append({
                     "body": "Sun",
                     "type": "Astronomical Twilight Start",
-                    "peak": f"{date_str}T{twilight_start[i]}",
-                    "rise": twilight_start[i],
+                    "peak": f"{date_str}T{ats[i]}",
+                    "rise": ats[i],
                     "set": None,
                     "obscuration": None,
                     "highlights": {
                         "source": "open_meteo",
                         "category": "twilight",
-                        "description": "Beginning of astronomical twilight - sky becomes dark enough for astronomical observations"
-                    }
+                        "description": "Beginning of astronomical twilight - sky becomes dark enough for observations",
+                    },
                 })
-            
-            # Create twilight end event
-            twilight_end = daily_data.get("astronomical_twilight_end", [])
-            if i < len(twilight_end) and twilight_end[i]:
+            if i < len(ate) and ate[i]:
                 events.append({
                     "body": "Sun",
                     "type": "Astronomical Twilight End",
-                    "peak": f"{date_str}T{twilight_end[i]}",
-                    "rise": twilight_end[i],
+                    "peak": f"{date_str}T{ate[i]}",
+                    "rise": ate[i],
                     "set": None,
                     "obscuration": None,
                     "highlights": {
                         "source": "open_meteo",
                         "category": "twilight",
-                        "description": "End of astronomical twilight - sky becomes too bright for astronomical observations"
-                    }
+                        "description": "End of astronomical twilight - sky becomes too bright for observations",
+                    },
                 })
-        
+
         return events
-        
-    except Exception as e:
+
+    except (HTTPError, RequestException, ValueError) as e:
         print(f"Error fetching twilight events: {e}")
         return []
 
 
 def fetch_meteor_shower_events(from_date=None, to_date=None, api_key=None):
     """
-    Fetch meteor shower events from AMS Meteors API
-    
-    Args:
-        from_date (date): Start date for data range
-        to_date (date): End date for data range
-        api_key (str): AMS Meteors API key
-    
-    Returns:
-        list: Standardized event data for meteor showers
+    Fetch meteor shower events from AMS Meteors API and return standardized events.
     """
+    api_key = api_key or AMS_METEORS_API_KEY
     if not api_key:
         print("AMS Meteors API key not provided, skipping meteor shower data")
         return []
-    
+
     try:
         today = datetime.now(timezone.utc).date()
-        
-        # Default window: past 365 days to next ~3 years
-        if not to_date:
-            to_date = today + timedelta(days=1095)
-        if not from_date:
-            from_date = today - timedelta(days=365)
-        
+        to_date = to_date or (today + timedelta(days=1095))
+        from_date = from_date or (today - timedelta(days=365))
+
         params = {
             "api_key": api_key,
             "start_date": str(from_date),
-            "end_date": str(to_date)
+            "end_date": str(to_date),
         }
-        
-        response = requests.get(f"{AMS_METEORS_API_BASE}/get_events", params=params)
-        response.raise_for_status()
-        data = response.json()
-        
+
+        resp = requests.get(f"{AMS_METEORS_API_BASE}/get_events", params=params, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json() or {}
+
         events = []
-        if data.get("status") == 200:
-            meteor_events = data.get("result", [])
-            for event in meteor_events:
+        if (data.get("status") == 200) and isinstance(data.get("result"), list):
+            for event in data["result"]:
                 events.append({
                     "body": "Meteor Shower",
                     "type": event.get("name", "Meteor Shower"),
@@ -180,59 +168,50 @@ def fetch_meteor_shower_events(from_date=None, to_date=None, api_key=None):
                         "category": "meteor_shower",
                         "description": event.get("description", ""),
                         "meteor_count": event.get("meteor_count", "Unknown"),
-                        "visibility": event.get("visibility", "Unknown")
-                    }
+                        "visibility": event.get("visibility", "Unknown"),
+                    },
                 })
-        
+
         return events
-        
-    except Exception as e:
+
+    except (HTTPError, RequestException, ValueError) as e:
         print(f"Error fetching meteor shower events: {e}")
         return []
 
 
 def fetch_fireball_events(from_date=None, to_date=None, api_key=None, latitude=None, longitude=None):
     """
-    Fetch fireball sighting events from AMS Meteors API
-    
-    Args:
-        from_date (date): Start date for data range
-        to_date (date): End date for data range
-        api_key (str): AMS Meteors API key
-        latitude (str): Latitude for proximity filtering
-        longitude (str): Longitude for proximity filtering
-    
-    Returns:
-        list: Standardized event data for fireball sightings
+    Fetch fireball sighting events from AMS Meteors API and return standardized events.
     """
+    api_key = api_key or AMS_METEORS_API_KEY
     if not api_key:
         print("AMS Meteors API key not provided, skipping fireball data")
         return []
-    
+
     try:
         today = datetime.now(timezone.utc).date()
-        
-        # Default window: past 365 days to next ~3 years
-        if not to_date:
-            to_date = today + timedelta(days=1095)
-        if not from_date:
-            from_date = today - timedelta(days=365)
-        
+        to_date = to_date or (today + timedelta(days=1095))
+        from_date = from_date or (today - timedelta(days=365))
+
         params = {
             "api_key": api_key,
             "start_date": str(from_date),
             "end_date": str(to_date),
-            "pending_only": 0  # Include confirmed reports
+            "pending_only": 0,  # Include confirmed reports
         }
-        
-        response = requests.get(f"{AMS_METEORS_API_BASE}/get_close_reports", params=params)
-        response.raise_for_status()
-        data = response.json()
-        
+
+        # If the endpoint supports proximity, include coordinates (harmless if ignored).
+        if latitude and longitude:
+            params["latitude"] = latitude
+            params["longitude"] = longitude
+
+        resp = requests.get(f"{AMS_METEORS_API_BASE}/get_close_reports", params=params, timeout=HTTP_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json() or {}
+
         events = []
-        if data.get("status") == 200:
-            fireball_reports = data.get("result", [])
-            for report in fireball_reports:
+        if (data.get("status") == 200) and isinstance(data.get("result"), list):
+            for report in data["result"]:
                 events.append({
                     "body": "Fireball",
                     "type": "Fireball Sighting",
@@ -243,33 +222,23 @@ def fetch_fireball_events(from_date=None, to_date=None, api_key=None, latitude=N
                     "highlights": {
                         "source": "ams_meteors",
                         "category": "fireball",
-                        "description": f"Fireball sighting reported",
+                        "description": "Fireball sighting reported",
                         "location": f"{report.get('city', 'Unknown')}, {report.get('state', 'Unknown')}",
                         "brightness": report.get("brightness", "Unknown"),
-                        "trajectory": report.get("trajectory", "Unknown")
-                    }
+                        "trajectory": report.get("trajectory", "Unknown"),
+                    },
                 })
-        
+
         return events
-        
-    except Exception as e:
+
+    except (HTTPError, RequestException, ValueError) as e:
         print(f"Error fetching fireball events: {e}")
         return []
 
 
 def standardize_event_data(event_data, source_api):
     """
-    Transform API responses into unified format
-    
-    Args:
-        event_data (dict): Raw event data from API
-        source_api (str): Source API identifier
-    
-    Returns:
-        dict: Standardized event data
+    Transform API responses into unified format. Currently pass-through since
+    the fetchers already standardize their return shape.
     """
-    # This function can be extended to normalize data from different APIs
-    # For now, we'll return the data as-is since each API function already
-    # returns standardized format
     return event_data
-
