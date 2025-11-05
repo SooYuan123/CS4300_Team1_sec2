@@ -187,7 +187,7 @@ def fetch_all_events(latitude, longitude):
 
     # In CI or when upstream fails, don't crash the whole endpoint; just return what we have.
     if successes == 0 and failures > 0:
-        print("WARN: Upstream Astronomy API failure for all bodies; returning available events only.")
+        raise RuntimeError("Upstream Astronomy API failure")
 
 
     print(f"Total events fetched from all sources: {len(events_data)}")
