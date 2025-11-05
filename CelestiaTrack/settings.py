@@ -150,9 +150,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 # Tell Django where to look for static files to serve
-STATIC_ROOT = os.path.join(BASE_DIR, 'home/static/')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR),]
+# STATICFILES_DIRS = [os.path.join(BASE_DIR),] # Commented out to let django find app static automatically 
 
 # Authentication settings
 LOGIN_REDIRECT_URL = '/'
