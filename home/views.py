@@ -1,22 +1,17 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
-<<<<<<< HEAD
 from .utils import (
     fetch_astronomical_events, 
     fetch_twilight_events, 
     fetch_meteor_shower_events, 
     fetch_fireball_events
 )
-from datetime import datetime
 from django.conf import settings
-=======
-from .utils import fetch_astronomical_events
 from datetime import datetime, timezone
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 
->>>>>>> origin/main
 
 def index(request):
     return render(request, 'index.html')
@@ -47,6 +42,7 @@ def events_list(request):
             "has_more": False
         })
 
+
 def _earliest_peak_from_events(events):
     """Return the earliest peak date string across an events list."""
     if not events:
@@ -65,6 +61,7 @@ def _earliest_peak_from_events(events):
         if earliest.utcoffset() == timezone.utc.utcoffset(earliest):
             return earliest.replace(tzinfo=None).isoformat() + "Z"
     return earliest.isoformat()
+
 
 def events_api(request):
     """Return events with offset/limit and proper has_more; return 500 on catastrophic failure."""
@@ -98,8 +95,8 @@ def events_api(request):
             "message": str(e),
         }, status=500)
 
+
 def fetch_all_events(latitude, longitude):
-<<<<<<< HEAD
     """
     Fetch events from all available sources and sort chronologically
     
@@ -114,17 +111,10 @@ def fetch_all_events(latitude, longitude):
     print("Fetching celestial body events from Astronomy API...")
     celestial_bodies = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
     
-=======
-    """Fetch events, dedupe by (peak, body), and sort chronologically with a stable body tie-break."""
-    celestial_bodies = ["sun","moon","mercury","venus","mars",
-                        "jupiter","saturn","uranus","neptune","pluto"]
-
-    events_data = []
     seen = set()  # (peak_date_str, body_name)
     failures = 0
     successes = 0
 
->>>>>>> origin/main
     for body in celestial_bodies:
         try:
             rows = fetch_astronomical_events(body, latitude, longitude)
@@ -141,7 +131,7 @@ def fetch_all_events(latitude, longitude):
                 if not peak_date:
                     continue
 
-                # NEW: dedupe on (peak, body) so Sun & Moon at same time both appear
+                # dedupe on (peak, body) so Sun & Moon at same time both appear
                 dedup_key = (peak_date, base_name)
                 if dedup_key in seen:
                     continue
@@ -195,17 +185,13 @@ def fetch_all_events(latitude, longitude):
     else:
         print("AMS Meteors API key not configured, skipping meteor and fireball data")
 
-<<<<<<< HEAD
-    print(f"Total events fetched from all sources: {len(events_data)}")
-    
-    # Sort by peak date, using datetime.max for events without peak dates
-    events_data = sorted(events_data, key=lambda e: e["peak"] or datetime.max.isoformat())
-    return events_data
-=======
+    # If Astronomy API completely failed for every body, surface a hard error
     if successes == 0 and failures > 0:
         raise RuntimeError("Upstream Astronomy API failure")
 
-    # NEW: tie-break by body name so Moon sorts before Sun when times are equal
+    print(f"Total events fetched from all sources: {len(events_data)}")
+
+    # Sort by parsed ISO peak time (UTC if available); tie-break by body name
     events_data.sort(
         key=lambda e: (
             _parse_iso(e["peak"]) or datetime.max.replace(tzinfo=timezone.utc),
@@ -213,7 +199,6 @@ def fetch_all_events(latitude, longitude):
         )
     )
     return events_data
-
 
 
 def _parse_iso(dt_str: str):
@@ -225,7 +210,8 @@ def _parse_iso(dt_str: str):
         return datetime.fromisoformat(val)
     except Exception:
         return None
-    
+
+
 def register(request):
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
@@ -239,4 +225,3 @@ def register(request):
     else:
         form = UserCreationForm()
     return render(request, 'auth/register.html', {'form': form})
->>>>>>> origin/main
