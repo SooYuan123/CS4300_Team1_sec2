@@ -14,6 +14,7 @@ load_dotenv()
 
 
 NASA_API_KEY = os.getenv("NASA_API_KEY")
+JWST_API_KEY = os.getenv("JWST_API_KEY")
 
 @login_required
 def gallery(request):
@@ -204,6 +205,70 @@ def _parse_iso(dt_str: str):
     except Exception:
         return None
 
+
+def get_jwst_random_image():
+    """Fetch a random JWST image."""
+    jwst_url = "https://api.jwstapi.com/all/type/jpg?page=1&perPage=30"
+
+    if not JWST_API_KEY:
+        print("JWST_API_KEY not set.")
+        return None
+
+    try:
+        headers = {"X-API-KEY": JWST_API_KEY}
+        resp = requests.get(jwst_url, headers=headers, timeout=10)
+
+        if resp.status_code == 200:
+            data = resp.json()
+
+            # Extract the body
+            if isinstance(data, dict) and 'body' in data:
+                body = data['body']
+                if body and len(body) > 0:
+                    # Filter out thumbnails, get actual images
+                    non_thumb_images = [item for item in body if '_thumb' not in item.get('id', '')]
+
+                    # If we have non-thumbnail images, use those; otherwise use all
+                    images_to_use = non_thumb_images if non_thumb_images else body
+
+                    # Use today's date to pick an image (same image all day)
+                    today = date.today()
+                    index = today.toordinal() % len(images_to_use)
+
+                    print(f"Selected image {index} out of {len(images_to_use)} images for {today}")
+                    return images_to_use[index]
+        else:
+            print(f"JWST API returned status {resp.status_code}")
+    except requests.RequestException as e:
+        print("JWST API request failed:", e)
+    return None
+
+
+def get_jwst_recent_images(count=10):
+    """Fetch recent JWST images."""
+    jwst_url = f"https://api.jwstapi.com/all/type/jpg?page=1&perPage={count}"
+
+    if not JWST_API_KEY:
+        print("JWST_API_KEY not set.")
+        return None
+
+    try:
+        headers = {"X-API-KEY": JWST_API_KEY}
+        resp = requests.get(jwst_url, headers=headers, timeout=10)
+
+        if resp.status_code == 200:
+            data = resp.json()
+            # Return the first 'count' images
+            if isinstance(data, list):
+                return data[:count]
+            elif isinstance(data, dict) and 'body' in data:
+                return data['body'][:count]
+        else:
+            print(f"JWST API returned status {resp.status_code}")
+    except requests.RequestException as e:
+        print("JWST API request failed:", e)
+    return None
+
 def get_apod_for_date(d):
     apod_base_url = "https://api.nasa.gov/planetary/apod"
     """Fetch APOD for a specific date."""
@@ -236,15 +301,23 @@ def find_most_recent_apod(max_days_back=30):
     return None
 
 def index(request):
-    """Render index page with APOD."""
-    apod = None
+    """Render index page with JWST image."""
+    jwst_image = None
+    use_jwst = True  # Flag to switch between NASA and JWST, False for using NASA API
+
     try:
-        apod = find_most_recent_apod()
+        if use_jwst:
+            # Use JWST API
+            jwst_image = get_jwst_random_image()
+        else:
+            # Fallback to NASA APOD
+            jwst_image = find_most_recent_apod()
     except Exception as e:
-        print("Error fetching APOD:", e)
+        print("Error fetching space image:", e)
 
     context = {
-        "apod": apod  # Could be None if fetch failed
+        "space_image": jwst_image,  # Changed from 'apod' to 'space_image'
+        "using_jwst": use_jwst
     }
     return render(request, "index.html", context)
 
