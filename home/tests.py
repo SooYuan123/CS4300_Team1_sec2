@@ -1,14 +1,15 @@
 from django.test import TestCase, RequestFactory
 from django.urls import reverse
 import requests
+from requests import Response
+from requests.exceptions import HTTPError, RequestException
 import requests_mock
 from home.utils import fetch_astronomical_events, get_auth_header
 from home.views import fetch_all_events
 from unittest.mock import patch, MagicMock
-from requests.exceptions import HTTPError, RequestException
 import importlib
-from requests import Response
 from home.views import _parse_iso
+import json
 
 class HomePageTest(TestCase):
     """Tests the basic functionality of the landing page."""
@@ -197,7 +198,7 @@ class ExtraCoverageTests(TestCase):
         request = self.factory.get(reverse("events_api") + "?offset=30&limit=10")
         response = importlib.import_module("home.views").events_api(request)
         self.assertEqual(response.status_code, 200)
-        data = response.json()
+        data = json.loads(response.content.decode())
         self.assertEqual(data["offset"], 30)
         self.assertEqual(data["limit"], 10)
         self.assertTrue(data["has_more"])
