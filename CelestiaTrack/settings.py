@@ -113,6 +113,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # IMPORTANT: do not set STATICFILES_DIRS for an app's own static folder.
 # Django will auto-discover home/static/**
 
+# Use non-manifest storage for tests/CI; use manifest on Render/prod.
+USE_MANIFEST_STATIC = config('USE_MANIFEST_STATIC', default=False, cast=bool)
+
 # WhiteNoise storage (Django 5.x way)
 STORAGES = {
     "staticfiles": {
@@ -128,7 +131,15 @@ SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 
 # Optional: make sure tests NEVER force HTTPS/cookie security
-if os.getenv('PYTEST_CURRENT_TEST'):
-    SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
+if os.getenv('PYTEST_CURRENT_TEST') or not USE_MANIFEST_STATIC:
+    # Test/dev: no manifest, so no collectstatic required for tests
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+else:
+    # Prod/Render: hashed filenames + compression
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    }
