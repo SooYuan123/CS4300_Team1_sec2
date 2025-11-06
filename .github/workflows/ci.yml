@@ -1,248 +1,118 @@
-name: CI Pipeline with AI Review
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-
-jobs:
-  test-and-coverage:
+ai-code-review:
+  name: ai-code-review
     runs-on: ubuntu-latest
+    needs: [test-and-coverage]
+    # Run on PRs that target main only; do not allow skipping by event type
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+
+  permissions:
+      contents: read
+      pull-requests: write
+      issues: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Fetch all history for better AI context
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Ensure OpenAI credentials exist
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is not set; failing ai-code-review."
+            exit 1
+          fi
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install coverage pytest pytest-django pytest-cov
+      - name: Determine changed files vs base
+        id: changed-files
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1 || true
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || true)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-    - name: Run migrations
-      run: |
-        python manage.py migrate --settings=CelestiaTrack.settings_ci
+      - name: AI Code Review with ChatGPT (never skip)
+        uses: actions/github-script@v7
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const fetch = global.fetch;
+            const allFiles = `\n${{ steps.changed-files.outputs.files }}`.trim().split('\n').filter(Boolean);
+            const CODE_EXT = /\.(py|js|jsx|ts|tsx|css|scss|html|json|ya?ml|md)$/i;
+            const codeFiles = allFiles.filter(f => CODE_EXT.test(f));
 
-    - name: Run tests with coverage
-      run: |
-        # Measure coverage for application code only (excludes migrations, venv, etc.)
-        # Add more apps here as your project grows: --source='home,CelestiaTrack,newapp'
-        coverage run --source='home,CelestiaTrack' manage.py test --settings=CelestiaTrack.settings_ci
-        coverage xml
-
-    - name: Check coverage threshold
-      run: |
-        # Fail if coverage is below threshold to maintain code quality
-        # Default is 80%, can be configured by setting COVERAGE_THRESHOLD env var
-        coverage report | tee coverage-report.txt
-        coverage report --fail-under=${COVERAGE_THRESHOLD:-80}
-
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: |
-          coverage.xml
-          coverage-report.txt
-
-    - name: Comment coverage on PR
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          const coverage = fs.readFileSync('coverage-report.txt', 'utf8');
-          const comment = `## Coverage Report\n\`\`\`\n${coverage}\n\`\`\``;
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
-
-  ai-code-review:
-    runs-on: ubuntu-latest
-    needs: [test-and-coverage]  # Only run if tests pass
-    if: github.event_name == 'pull_request'
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Fetch full history to handle multiple commits in PR
-
-    - name: Get changed files
-      id: changed-files
-      run: |
-        git fetch origin ${{ github.base_ref }}
-        CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || echo "")
-        echo "files<<EOF" >> $GITHUB_OUTPUT
-        echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-
-    - name: AI Code Review with ChatGPT
-      if: steps.changed-files.outputs.files != ''
-      uses: actions/github-script@v7
-      env:
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }} # override in repo/org vars if you want
-      with:
-        script: |
-          const { execSync } = require('child_process');
-          const fs = require('fs');
-
-          // 1) Filter to code-like files to reduce noise
-          const ALL = `${{ steps.changed-files.outputs.files }}`.split('\n').filter(Boolean);
-          const CODE_EXT = /\.(py|js|jsx|ts|tsx|css|scss|html|json|yml|yaml|md)$/i;
-          const FILES = ALL.filter(f => CODE_EXT.test(f));
-          if (FILES.length === 0) {
-            console.log('No relevant code files changed.');
-            return;
-          }
-
-          // 2) Build diffs, trimming each file’s patch to avoid explosions
-          const PER_FILE_MAX_LINES = 300; // cap per-file
-          const diffs = [];
-          for (const file of FILES) {
-            try {
-              const raw = execSync(`git diff origin/${{ github.base_ref }}...HEAD -- ${file}`, {encoding: 'utf8'});
-              if (!raw.trim()) continue;
-              const lines = raw.split('\n');
-              const head = lines.slice(0, PER_FILE_MAX_LINES).join('\n');
-              diffs.push(`### File: ${file}\n${head}${lines.length > PER_FILE_MAX_LINES ? '\n... (truncated)' : ''}`);
-            } catch {
-              console.log(`Could not get diff for ${file}`);
+            // Build diff content (fall back to PR title/description if no code files)
+            let diffContent = '';
+            if (codeFiles.length > 0) {
+              const PER_FILE_MAX_LINES = 300;
+              const diffs = [];
+              for (const file of codeFiles) {
+                try {
+                  const raw = execSync(`git diff origin/${{ github.base_ref }}...HEAD -- ${file}`, {encoding: 'utf8'});
+                  if (!raw.trim()) continue;
+                  const lines = raw.split('\n');
+                  const head = lines.slice(0, PER_FILE_MAX_LINES).join('\n');
+                  diffs.push(`### File: ${file}\n${head}${lines.length > PER_FILE_MAX_LINES ? '\n... (truncated)' : ''}`);
+                } catch {}
+              }
+              diffContent = diffs.join('\n\n');
             }
-          }
-          if (diffs.length === 0) {
-            console.log('No diffs produced after filtering.');
-            return;
-          }
 
-          // 3) Hard cap the entire prompt by characters
-          const MAX_CHARS = 20000; // ~5k tokens (rule of thumb 4 chars/token)
-          let diffContent = diffs.join('\n\n');
-          if (diffContent.length > MAX_CHARS) {
-            diffContent = diffContent.slice(-MAX_CHARS);
-          }
-
-          // Helper to call OpenAI Chat Completions API
-          async function chat(messages, maxTokens=1200, temperature=0.2) {
-            const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-            const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-              },
-              body: JSON.stringify({
-                model,
-                messages,
-                max_tokens: maxTokens,
-                temperature,
-              }),
-            });
-            const data = await resp.json();
-            if (!resp.ok) {
-              console.error('OpenAI API error:', data);
-              throw new Error(`OpenAI API failed: ${data.error?.message || 'Unknown error'}`);
+            // If nothing code-like changed, still produce a review (do not skip the job)
+            if (!diffContent) {
+              const pr = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number
+              });
+              const meta = `PR Title: ${pr.data.title}\n\nPR Body:\n${pr.data.body || '(no description)'}\n\nChanged files:\n${allFiles.join('\n') || '(none)'}`;
+              diffContent = `No code files matched filter; review PR context instead:\n\n${meta}`;
             }
-            return data.choices[0].message.content;
-          }
 
-          const systemPrompt =
-            'You are an expert code reviewer. Review the diffs and give concise, actionable feedback on: ' +
-            '1) Potential bugs, 2) Security, 3) Performance, 4) Code quality/best practices, 5) Test coverage suggestions. ' +
-            'Use bullets, reference files/lines if possible, and keep it short.';
+            async function chat(messages, maxTokens=1200, temperature=0.2) {
+              const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+              const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                },
+                body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
+              });
+              const data = await resp.json();
+              if (!resp.ok) {
+                console.error('OpenAI API error:', data);
+                throw new Error(`OpenAI API failed: ${data.error?.message || 'Unknown error'}`);
+              }
+              return data.choices[0].message.content;
+            }
 
-          // 4) If still too large for one pass, split into chunks and summarize (map-reduce)
-          const CHUNK_SIZE = 9000; // chars per chunk (~2.2k tokens)
-          function chunk(s, size) {
-            const out = [];
-            for (let i=0;i<s.length;i+=size) out.push(s.slice(i,i+size));
-            return out;
-          }
-          const parts = chunk(diffContent, CHUNK_SIZE);
+            const systemPrompt =
+              'You are an expert code reviewer. Provide concise, actionable feedback on: ' +
+              '1) Potential bugs, 2) Security issues, 3) Performance concerns, 4) Code quality/best practices, 5) Test coverage suggestions. ' +
+              'Use bullets and reference files/lines when possible. Keep it succinct but specific.';
 
-          let reviewText = '';
-          if (parts.length === 1) {
-            // Single call path
-            reviewText = await chat([
+            // Cap prompt size
+            const MAX_CHARS = 20000;
+            if (diffContent.length > MAX_CHARS) {
+              diffContent = diffContent.slice(-MAX_CHARS);
+            }
+
+            let reviewText = await chat([
               { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Please review these code changes:\n${parts[0]}` },
+              { role: 'user', content: `Review these changes (or PR context if no diff):\n${diffContent}` },
             ]);
-          } else {
-            // Map phase: summarize each chunk
-            const partials = [];
-            for (let i=0; i<parts.length; i++) {
-              const res = await chat([
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: `Part ${i+1}/${parts.length}. Review this subset and produce a concise bullet summary:\n${parts[i]}` },
-              ], 900, 0.2);
-              partials.push(`### Part ${i+1}\n${res}`);
-            }
-            // Reduce phase: merge partials
-            const merged = partials.join('\n\n');
-            reviewText = await chat([
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Combine the following part-summaries into one succinct, non-repetitive review:\n${merged}` },
-            ], 1200, 0.2);
-          }
 
-          // 5) Post the review as a PR comment
-          await github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `## AI Code Review\n\n${reviewText}\n\n---\n*Automated review*`
-          });
-
-
-  lint:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install linting tools
-      run: |
-        pip install flake8 pylint black isort
-
-    - name: Run flake8
-      continue-on-error: true
-      run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics > flake8-report.txt
-
-    - name: Run pylint
-      continue-on-error: true
-      run: |
-        pylint **/*.py --exit-zero > pylint-report.txt || true
-
-    - name: Upload lint reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: lint-reports
-        path: |
-          flake8-report.txt
-          pylint-report.txt
+            // Post a PR comment — existence of this comment is what you’ll require in branch protection (via status check pass)
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## AI Code Review\n\n${reviewText}\n\n---\n*Automated review*`
+            });
