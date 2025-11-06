@@ -14,11 +14,13 @@
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'styles.css' %}">
 </head>
+
+{% include 'header.html' %}
 <body class="bg-dark text-light">
   <div class="container my-5">
-    <h1 class="text-center mb-5" style="font-family: 'Orbitron', sans-serif;">
+    <h2 class="text-center mb-5" style="font-family: 'Orbitron', sans-serif;">
       Upcoming Astronomical Events
-    </h1>
+    </h2>
 
     {% if events %}
       <div class="row g-4" id="events-container">
