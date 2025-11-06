@@ -1,11 +1,92 @@
-ai-code-review:
-  name: ai-code-review
+name: CI Pipeline with AI Review
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+# Avoid overlapping runs on the same ref
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-coverage:
+    name: test-and-coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for better AI context
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install coverage pytest pytest-django pytest-cov
+
+      - name: Run migrations
+        run: |
+          python manage.py migrate --settings=CelestiaTrack.settings_ci
+
+      - name: Run tests with coverage
+        run: |
+          # Measure coverage for application code only (excludes migrations, venv, etc.)
+          # Add more apps here as your project grows: --source='home,CelestiaTrack,newapp'
+          coverage run --source='home,CelestiaTrack' manage.py test --settings=CelestiaTrack.settings_ci
+          coverage xml
+
+      - name: Check coverage threshold
+        run: |
+          # Fail if coverage is below threshold to maintain code quality
+          # Default is 80%, can be configured by setting COVERAGE_THRESHOLD env var
+          coverage report | tee coverage-report.txt
+          coverage report --fail-under=${COVERAGE_THRESHOLD:-80}
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            coverage-report.txt
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = fs.readFileSync('coverage-report.txt', 'utf8');
+            const comment = `## Coverage Report\n\`\`\`\n${coverage}\n\`\`\``;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  ai-code-review:
+    name: ai-code-review
     runs-on: ubuntu-latest
     needs: [test-and-coverage]
-    # Run on PRs that target main only; do not allow skipping by event type
+    # Enforce AI review for PRs targeting main (cannot skip even if no code files)
     if: github.event_name == 'pull_request' && github.base_ref == 'main'
 
-  permissions:
+    permissions:
       contents: read
       pull-requests: write
       issues: write
@@ -25,11 +106,16 @@ ai-code-review:
             exit 1
           fi
 
-      - name: Determine changed files vs base
+      - name: Determine changed files (base..head)
         id: changed-files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1 || true
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || true)
+          set -e
+          echo "Base: $BASE_SHA"
+          echo "Head: $HEAD_SHA"
+          CHANGED=$(git diff --name-only "$BASE_SHA...$HEAD_SHA" || true)
           echo "files<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGED" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -38,31 +124,37 @@ ai-code-review:
         uses: actions/github-script@v7
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }} # optional; fallback set in script
         with:
           script: |
             const { execSync } = require('child_process');
-            const fetch = global.fetch;
-            const allFiles = `\n${{ steps.changed-files.outputs.files }}`.trim().split('\n').filter(Boolean);
+
+            const allFiles = (`${{ steps.changed-files.outputs.files }}` || '')
+              .split('\n').map(s => s.trim()).filter(Boolean);
+
+            // Filter to code-like files to reduce noise
             const CODE_EXT = /\.(py|js|jsx|ts|tsx|css|scss|html|json|ya?ml|md)$/i;
             const codeFiles = allFiles.filter(f => CODE_EXT.test(f));
 
-            // Build diff content (fall back to PR title/description if no code files)
-            let diffContent = '';
-            if (codeFiles.length > 0) {
-              const PER_FILE_MAX_LINES = 300;
-              const diffs = [];
-              for (const file of codeFiles) {
-                try {
-                  const raw = execSync(`git diff origin/${{ github.base_ref }}...HEAD -- ${file}`, {encoding: 'utf8'});
-                  if (!raw.trim()) continue;
-                  const lines = raw.split('\n');
-                  const head = lines.slice(0, PER_FILE_MAX_LINES).join('\n');
-                  diffs.push(`### File: ${file}\n${head}${lines.length > PER_FILE_MAX_LINES ? '\n... (truncated)' : ''}`);
-                } catch {}
+            // Build diffs, trimming each file’s patch
+            const PER_FILE_MAX_LINES = 300;
+            const diffs = [];
+            const base = process.env.BASE_SHA || '${{ github.event.pull_request.base.sha }}';
+            const head = process.env.HEAD_SHA || '${{ github.sha }}';
+
+            for (const file of codeFiles) {
+              try {
+                const raw = execSync(`git diff ${base}...${head} -- ${file}`, { encoding: 'utf8', stdio: ['ignore','pipe','pipe'] });
+                if (!raw.trim()) continue;
+                const lines = raw.split('\n');
+                const headPart = lines.slice(0, PER_FILE_MAX_LINES).join('\n');
+                diffs.push(`### File: ${file}\n${headPart}${lines.length > PER_FILE_MAX_LINES ? '\n... (truncated)' : ''}`);
+              } catch (e) {
+                console.log(`Could not get diff for ${file}: ${e.message}`);
               }
-              diffContent = diffs.join('\n\n');
             }
+
+            let diffContent = diffs.join('\n\n');
 
             // If nothing code-like changed, still produce a review (do not skip the job)
             if (!diffContent) {
@@ -75,8 +167,10 @@ ai-code-review:
               diffContent = `No code files matched filter; review PR context instead:\n\n${meta}`;
             }
 
-            async function chat(messages, maxTokens=1200, temperature=0.2) {
-              const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+            async function chat(messages, maxTokens = 1200, temperature = 0.2) {
+              const model = process.env.OPENAI_MODEL && process.env.OPENAI_MODEL.trim()
+                ? process.env.OPENAI_MODEL.trim()
+                : 'gpt-4o-mini';
               const resp = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -90,7 +184,7 @@ ai-code-review:
                 console.error('OpenAI API error:', data);
                 throw new Error(`OpenAI API failed: ${data.error?.message || 'Unknown error'}`);
               }
-              return data.choices[0].message.content;
+              return data.choices?.[0]?.message?.content || '(no content)';
             }
 
             const systemPrompt =
@@ -98,21 +192,56 @@ ai-code-review:
               '1) Potential bugs, 2) Security issues, 3) Performance concerns, 4) Code quality/best practices, 5) Test coverage suggestions. ' +
               'Use bullets and reference files/lines when possible. Keep it succinct but specific.';
 
-            // Cap prompt size
+            // Cap prompt size (~5k tokens)
             const MAX_CHARS = 20000;
             if (diffContent.length > MAX_CHARS) {
               diffContent = diffContent.slice(-MAX_CHARS);
             }
 
-            let reviewText = await chat([
+            const reviewText = await chat([
               { role: 'system', content: systemPrompt },
               { role: 'user', content: `Review these changes (or PR context if no diff):\n${diffContent}` },
             ]);
 
-            // Post a PR comment — existence of this comment is what you’ll require in branch protection (via status check pass)
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `## AI Code Review\n\n${reviewText}\n\n---\n*Automated review*`
             });
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linting tools
+        run: |
+          pip install flake8 pylint black isort
+
+      - name: Run flake8
+        continue-on-error: true
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics > flake8-report.txt
+
+      - name: Run pylint
+        continue-on-error: true
+        run: |
+          pylint **/*.py --exit-zero > pylint-report.txt || true
+
+      - name: Upload lint reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: |
+            flake8-report.txt
+            pylint-report.txt
