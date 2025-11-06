@@ -9,7 +9,13 @@ from django.conf import settings
 from datetime import date, datetime, timezone, timedelta
 import os
 import requests
-from dotenv import load_dotenv
+
+# Optional: load local .env in dev; no-op in CI/Render if dotenv not present
+try:
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv()
+except Exception:
+    pass
 
 from .utils import (
     fetch_astronomical_events,
@@ -17,8 +23,6 @@ from .utils import (
     fetch_meteor_shower_events,
     fetch_fireball_events,
 )
-
-load_dotenv()
 
 # Optional API keys for index/gallery helpers
 NASA_API_KEY = os.getenv("NASA_API_KEY")
@@ -39,7 +43,7 @@ def gallery(request):
         data = response.json()
 
         items = (data.get("collection") or {}).get("items") or []
-        for item in items[:40]:  # limit number of images
+        for item in items[:40]:
             links = item.get("links") or []
             data_block = item.get("data") or []
             if not links or not data_block:
@@ -52,7 +56,7 @@ def gallery(request):
                 images.append({"src": link, "title": title, "desc": description})
     except Exception as e:
         print("NASA API fetch failed:", e)
-        # Fallback static images
+        # Fallback static images (public domain/unsplash-like)
         images = [
             {"src": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80"},
             {"src": "https://images.unsplash.com/photo-1529788295308-1eace6f67388?auto=format&fit=crop&w=1200&q=80"},
@@ -69,7 +73,7 @@ def gallery(request):
 # Events pages / API
 # -------------------------
 def events_list(request):
-    """Render the events page with first 20 events"""
+    """Render the events page with first 20 events."""
     latitude, longitude = "38.775867", "-84.39733"
     try:
         events_data = fetch_all_events(latitude, longitude)
@@ -85,25 +89,6 @@ def events_list(request):
     except Exception as e:
         print(f"ERROR in events_list: {e}")
         return render(request, "events_list.html", {"events": [], "has_more": False})
-
-
-def _earliest_peak_from_events(events):
-    """Return the earliest peak date string across an events list."""
-    if not events:
-        return None
-    peaks = []
-    for ev in events:
-        peak = ((ev.get("eventHighlights") or {}).get("peak") or {}).get("date")
-        if peak:
-            peaks.append(_parse_iso(peak))
-    if not peaks:
-        return None
-    earliest = min(peaks)
-    # convert back to isoformat, keeping 'Z' if UTC
-    if earliest and earliest.tzinfo:
-        if earliest.utcoffset() == timezone.utc.utcoffset(earliest):
-            return earliest.replace(tzinfo=None).isoformat() + "Z"
-    return earliest.isoformat()
 
 
 def events_api(request):
@@ -170,6 +155,7 @@ def fetch_all_events(latitude, longitude):
                 if not peak_date:
                     continue
 
+                # dedupe on (peak, body)
                 dedup_key = (peak_date, base_name)
                 if dedup_key in seen:
                     continue
@@ -236,6 +222,24 @@ def fetch_all_events(latitude, longitude):
     return events_data
 
 
+def _earliest_peak_from_events(events):
+    """Return the earliest peak date string across an events list."""
+    if not events:
+        return None
+    peaks = []
+    for ev in events:
+        peak = ((ev.get("eventHighlights") or {}).get("peak") or {}).get("date")
+        if peak:
+            peaks.append(_parse_iso(peak))
+    if not peaks:
+        return None
+    earliest = min(peaks)
+    if earliest and earliest.tzinfo:
+        if earliest.utcoffset() == timezone.utc.utcoffset(earliest):
+            return earliest.replace(tzinfo=None).isoformat() + "Z"
+    return earliest.isoformat()
+
+
 def _parse_iso(dt_str: str):
     if not dt_str:
         return None
@@ -266,8 +270,9 @@ def get_jwst_random_image():
             if body:
                 non_thumb = [item for item in body if "_thumb" not in item.get("id", "")]
                 images = non_thumb or body
-                idx = date.today().toordinal() % len(images)
-                return images[idx]
+                if images:
+                    idx = date.today().toordinal() % len(images)
+                    return images[idx]
         else:
             print(f"JWST API returned status {resp.status_code}")
     except requests.RequestException as e:
