@@ -99,49 +99,54 @@ jobs:
       uses: actions/github-script@v7
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }} # override in repo/org vars if you want
+        # Hardcode a model with >= 32k context or one you know exists; override via repo/org vars if needed.
+        OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o-mini' }}
       with:
         script: |
           const { execSync } = require('child_process');
-          const fs = require('fs');
 
-          // 1) Filter to code-like files to reduce noise
+          // 1) Filter to code-like files and cap the number of files
           const ALL = `${{ steps.changed-files.outputs.files }}`.split('\n').filter(Boolean);
           const CODE_EXT = /\.(py|js|jsx|ts|tsx|css|scss|html|json|yml|yaml|md)$/i;
-          const FILES = ALL.filter(f => CODE_EXT.test(f));
+          let FILES = ALL.filter(f => CODE_EXT.test(f));
+          const MAX_FILES = 25;
+          if (FILES.length > MAX_FILES) FILES = FILES.slice(0, MAX_FILES);
+
           if (FILES.length === 0) {
             console.log('No relevant code files changed.');
             return;
           }
 
-          // 2) Build diffs, trimming each file’s patch to avoid explosions
-          const PER_FILE_MAX_LINES = 300; // cap per-file
+          // 2) Build diffs with strict caps
+          const PER_FILE_MAX_LINES = 120;         // tighter per-file cap
+          const MAX_CHARS = 6000;                 // hard cap for total prompt (~1.5k tokens)
+          const CHUNK_SIZE = 2400;                // per chunk (~600 tokens)
           const diffs = [];
+
           for (const file of FILES) {
             try {
-              const raw = execSync(`git diff origin/${{ github.base_ref }}...HEAD -- ${file}`, {encoding: 'utf8'});
+              const raw = execSync(`git diff --unified=2 origin/${{ github.base_ref }}...HEAD -- ${file}`, {encoding: 'utf8'});
               if (!raw.trim()) continue;
               const lines = raw.split('\n');
               const head = lines.slice(0, PER_FILE_MAX_LINES).join('\n');
-              diffs.push(`### File: ${file}\n${head}${lines.length > PER_FILE_MAX_LINES ? '\n... (truncated)' : ''}`);
+              diffs.push(`### ${file}\n${head}${lines.length > PER_FILE_MAX_LINES ? '\n... (truncated)' : ''}`);
             } catch {
               console.log(`Could not get diff for ${file}`);
             }
           }
+
           if (diffs.length === 0) {
             console.log('No diffs produced after filtering.');
             return;
           }
 
-          // 3) Hard cap the entire prompt by characters
-          const MAX_CHARS = 20000; // ~5k tokens (rule of thumb 4 chars/token)
           let diffContent = diffs.join('\n\n');
           if (diffContent.length > MAX_CHARS) {
+            // keep the most recent tail since it often contains latest hunks
             diffContent = diffContent.slice(-MAX_CHARS);
           }
 
-          // Helper to call OpenAI Chat Completions API
-          async function chat(messages, maxTokens=1200, temperature=0.2) {
+          async function chat(messages, maxTokens=500, temperature=0.2) {
             const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
             const resp = await fetch('https://api.openai.com/v1/chat/completions', {
               method: 'POST',
@@ -149,12 +154,7 @@ jobs:
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
               },
-              body: JSON.stringify({
-                model,
-                messages,
-                max_tokens: maxTokens,
-                temperature,
-              }),
+              body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
             });
             const data = await resp.json();
             if (!resp.ok) {
@@ -165,52 +165,50 @@ jobs:
           }
 
           const systemPrompt =
-            'You are an expert code reviewer. Review the diffs and give concise, actionable feedback on: ' +
-            '1) Potential bugs, 2) Security, 3) Performance, 4) Code quality/best practices, 5) Test coverage suggestions. ' +
-            'Use bullets, reference files/lines if possible, and keep it short.';
+            'You are an expert code reviewer. Provide concise, actionable bullets on: ' +
+            '1) Potential bugs, 2) Security, 3) Performance, 4) Code style/best practices, 5) Missing tests. ' +
+            'Cite files/lines if possible. Keep it short.';
 
-          // 4) If still too large for one pass, split into chunks and summarize (map-reduce)
-          const CHUNK_SIZE = 9000; // chars per chunk (~2.2k tokens)
-          function chunk(s, size) {
-            const out = [];
-            for (let i=0;i<s.length;i+=size) out.push(s.slice(i,i+size));
-            return out;
-          }
+          // Chunk helper
+          function chunk(s, n) { const out=[]; for (let i=0;i<s.length;i+=n) out.push(s.slice(i,i+n)); return out; }
           const parts = chunk(diffContent, CHUNK_SIZE);
 
           let reviewText = '';
-          if (parts.length === 1) {
-            // Single call path
-            reviewText = await chat([
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Please review these code changes:\n${parts[0]}` },
-            ]);
-          } else {
-            // Map phase: summarize each chunk
-            const partials = [];
-            for (let i=0; i<parts.length; i++) {
-              const res = await chat([
+          try {
+            if (parts.length === 1) {
+              reviewText = await chat([
                 { role: 'system', content: systemPrompt },
-                { role: 'user', content: `Part ${i+1}/${parts.length}. Review this subset and produce a concise bullet summary:\n${parts[i]}` },
-              ], 900, 0.2);
-              partials.push(`### Part ${i+1}\n${res}`);
+                { role: 'user', content: `Review these changes:\n${parts[0]}` },
+              ], 500, 0.2);
+            } else {
+              const partials = [];
+              for (let i=0;i<parts.length;i++) {
+                const res = await chat([
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: `Part ${i+1}/${parts.length}:\n${parts[i]}` },
+                ], 400, 0.2);
+                partials.push(`### Part ${i+1}\n${res}`);
+              }
+              const merged = partials.join('\n\n');
+              reviewText = await chat([
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: `Combine the following into one succinct, non-repetitive review:\n${merged}` },
+              ], 600, 0.2);
             }
-            // Reduce phase: merge partials
-            const merged = partials.join('\n\n');
-            reviewText = await chat([
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: `Combine the following part-summaries into one succinct, non-repetitive review:\n${merged}` },
-            ], 1200, 0.2);
+          } catch (e) {
+            // If we still hit limits or any API error, post a graceful note and stop failing the job
+            const note = 'Diff too large or API limit reached; posting a minimal summary.\n\n' +
+                         '- Consider reviewing file-by-file or narrowing the PR scope.\n' +
+                         '- The CI has trimmed diffs aggressively to avoid token overflows.';
+            reviewText = note + `\n\n(Error details: ${e.message})`;
           }
 
-          // 5) Post the review as a PR comment
           await github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
             body: `## AI Code Review\n\n${reviewText}\n\n---\n*Automated review*`
           });
-
 
   lint:
     runs-on: ubuntu-latest

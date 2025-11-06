@@ -14,8 +14,9 @@ Each event is displayed in a clean, responsive Bootstrap layout with details suc
    pip install -r requirements.txt
 4. Create a .env file in the project root (with manage.py):  
 ASTRONOMY_API_APP_ID=your_app_id_here  
-ASTRONOMY_API_APP_SECRET=your_app_secret_here  
-You can obtain your credentials by registering at [astronomyapi.com](astronomyapi.com)
+ASTRONOMY_API_APP_SECRET=your_app_secret_here 
+NASA_API_KEY=your_key_here 
+You can obtain your credentials by registering at [astronomyapi.com](astronomyapi.com) or [api.nasa.gov](https://api.nasa.gov/#:~:text=Browse%20APIs-,Generate%20API%20Key,-Required%20fields%20are)
 
 5. Run migrations
    ```bash
