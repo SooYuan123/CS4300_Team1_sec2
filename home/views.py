@@ -4,13 +4,12 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
-
 from django.conf import settings
 from datetime import date, datetime, timezone, timedelta
 import os
 import requests
 from dotenv import load_dotenv
-
+from .models import Favorite
 from .utils import (
     fetch_astronomical_events,
     fetch_twilight_events,
@@ -28,7 +27,6 @@ JWST_API_KEY = os.getenv("JWST_API_KEY")
 # -------------------------
 # Gallery (html-images feature)
 # -------------------------
-@login_required
 def gallery(request):
     nasa_url = "https://images-api.nasa.gov/search?q=space&media_type=image"
     images = []
@@ -61,6 +59,10 @@ def gallery(request):
             {"src": "https://images.unsplash.com/photo-1706211306896-92c4abb298d7?auto=format&fit=crop&w=1200&q=80"},
             {"src": "https://images.unsplash.com/photo-1707058665549-c2a27e3fad45?auto=format&fit=crop&w=1200&q=80"},
         ]
+
+    user_favorites = []
+    if request.user.is_authenticated:
+        user_favorites = Favorite.objects.filter(user=request.user).values_list('image_url', flat=True)
 
     return render(request, "gallery.html", {"images": images})
 
@@ -360,3 +362,31 @@ def register(request):
     else:
         form = UserCreationForm()
     return render(request, "auth/register.html", {"form": form})
+
+
+def toggle_favorite(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'redirect': '/login/', 'message': 'Please login to add favorites.'}, status=401)
+
+    image_url = request.POST.get('image_url')
+    title = request.POST.get('title', '')
+    desc = request.POST.get('desc', '')
+
+    favorite, created = Favorite.objects.get_or_create(
+        user=request.user,
+        image_url=image_url,
+        defaults={'title': title, 'desc': desc}
+    )
+
+    if not created:
+        # If it already exists, unfavorite it
+        favorite.delete()
+        return JsonResponse({'favorited': False})
+    else:
+        return JsonResponse({'favorited': True})
+
+
+@login_required
+def favorites(request):
+    favorites = Favorite.objects.filter(user=request.user)
+    return render(request, "favorites.html", {"favorites": favorites})

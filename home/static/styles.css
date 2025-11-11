@@ -200,3 +200,20 @@
   .apod-section img:hover {
     transform: scale(1.025);
   }
+
+  .favorite-star {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 1.6rem;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.2s ease;
+    z-index: 10;
+  }
+  
+  .favorite-star:hover {
+    color: gold;
+    transform: scale(1.1);
+  }
+  

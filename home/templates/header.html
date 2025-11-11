@@ -13,6 +13,12 @@
         <li class="nav-item"><a href="/events/" class="nav-link">Events</a></li>
         <li class="nav-item"><a href="/gallery/" class="nav-link">Gallery</a></li>
         {% if user.is_authenticated %}
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'favorites' %}">Favorites</a>
+        </li>
+        {% endif %}
+
+        {% if user.is_authenticated %}
           <li class="nav-item">
             <form method="post" action="{% url 'logout' %}" style="display: inline;">
               {% csrf_token %}
