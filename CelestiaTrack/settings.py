@@ -30,6 +30,8 @@ LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/login/'
 
 ALLOWED_HOSTS = [
+    'celestiatrack.xyz',
+    'www.celestiatrack.xyz',
     '127.0.0.1',
     '0.0.0.0',
     'localhost',
