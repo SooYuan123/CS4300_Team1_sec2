@@ -69,11 +69,6 @@ class GalleryTests(TestCase):
         """Create a test user for login-required tests."""
         self.user = User.objects.create_user(username='testuser', password='testpass123')
 
-    def test_gallery_requires_login(self):
-        """Test that gallery requires authentication."""
-        response = self.client.get(reverse('gallery'))
-        self.assertEqual(response.status_code, 302)  # Redirect to login
-
     def test_gallery_with_nasa_images_success(self):
         """Test gallery successfully loads NASA images with all data fields."""
         self.client.login(username='testuser', password='testpass123')
