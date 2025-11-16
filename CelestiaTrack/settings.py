@@ -112,6 +112,10 @@ USE_TZ = True
 # Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# for localhost testing
+#STATIC_ROOT = os.path.join(BASE_DIR, 'home/static/')
+
 # IMPORTANT: do not set STATICFILES_DIRS for an app's own static folder.
 # Django will auto-discover home/static/**
 
