@@ -2,7 +2,7 @@ name: Dependabot Security Report
 
 on:
   push:
-    branches: [ main, master, develop, favorite-images, dependabot-security-scanning ]
+    branches: [ main, master, develop, favorite-images, dependabot-setup ]
   pull_request:
     branches: [ main, master, develop ]
   schedule:
