@@ -332,7 +332,7 @@ def find_most_recent_apod(max_days_back=30):
 def index(request):
     """Render index page with JWST image (fallback to APOD)."""
     jwst_image = None
-    use_jwst = True  # set False to use NASA APOD fallback
+    use_jwst = False #set False to use NASA APOD fallback, True for JWST API
 
     try:
         jwst_image = get_jwst_random_image() if use_jwst else find_most_recent_apod()
