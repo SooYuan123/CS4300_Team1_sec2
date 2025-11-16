@@ -1,0 +1,87 @@
+name: Dependabot Security Report
+
+on:
+  push:
+    branches: [ main, master, develop, favorite-images, dependabot-security-scanning ]
+  pull_request:
+    branches: [ main, master, develop ]
+  schedule:
+    # Run daily at 8 AM UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  security-report:
+    name: Generate Dependabot Security Report
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety pip-audit
+
+      - name: Run Safety check
+        continue-on-error: true
+        run: |
+          echo "==================================="
+          echo "DEPENDABOT SECURITY REPORT"
+          echo "==================================="
+          echo ""
+          echo "Running Safety vulnerability scan..."
+          echo ""
+          safety check --json --file requirements.txt || true
+          echo ""
+          echo "Running Safety scan with detailed output..."
+          safety check --file requirements.txt || true
+
+      - name: Run pip-audit
+        continue-on-error: true
+        run: |
+          echo ""
+          echo "==================================="
+          echo "PIP-AUDIT VULNERABILITY SCAN"
+          echo "==================================="
+          echo ""
+          pip-audit --requirement requirements.txt || true
+
+      - name: Check for Dependabot alerts
+        continue-on-error: true
+        run: |
+          echo ""
+          echo "==================================="
+          echo "DEPENDABOT STATUS"
+          echo "==================================="
+          echo ""
+          echo "Dependabot is configured and monitoring dependencies"
+          echo "Configuration file: .github/dependabot.yml"
+          echo "Check GitHub Security tab for detailed alerts"
+          echo ""
+          echo "To view Dependabot alerts:"
+          echo "  1. Go to repository on GitHub"
+          echo "  2. Click 'Security' tab"
+          echo "  3. Click 'Dependabot alerts' in sidebar"
+          echo ""
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "==================================="
+          echo "SCAN COMPLETE"
+          echo "==================================="
+          echo ""
+          echo "Vulnerability scanning completed"
+          echo "Review the output above for any issues"
+          echo "Dependabot will automatically create PRs for security updates"
+          echo ""
