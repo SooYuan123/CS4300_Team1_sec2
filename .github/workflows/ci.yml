@@ -84,7 +84,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-and-coverage]
     # Enforce AI review for PRs targeting main (cannot skip even if no code files)
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    # Skip for Dependabot automated PRs
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.actor != 'dependabot[bot]'
 
     permissions:
       contents: read
