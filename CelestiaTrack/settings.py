@@ -25,6 +25,12 @@ ASTRONOMY_API_APP_ID = config('ASTRONOMY_API_APP_ID', default='')
 ASTRONOMY_API_APP_SECRET = config('ASTRONOMY_API_APP_SECRET', default='')
 SSOD_APP_ID = config('SSOD_APP_ID', default='')
 
+# Radiant Drift API
+RADIANT_DRIFT_API_KEY = os.getenv('RADIANT_DRIFT_API_KEY')
+
+# Solar System OpenData API  
+SOLAR_SYSTEM_API_KEY = os.getenv('SOLAR_SYSTEM_API_KEY')
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 

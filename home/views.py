@@ -3,7 +3,13 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.http import JsonResponse
-from .utils import fetch_astronomical_events, get_celestial_bodies_with_visibility
+from .utils import (
+    fetch_astronomical_events, 
+    get_celestial_bodies_with_visibility,
+    fetch_rise_set_times,
+    fetch_moon_phase,
+    fetch_solar_eclipse_data
+)
 from datetime import date, datetime, timezone, timedelta
 import requests
 from dotenv import load_dotenv
@@ -11,7 +17,6 @@ import os
 from django.contrib.auth.decorators import login_required
 
 load_dotenv()
-
 
 NASA_API_KEY = os.getenv("NASA_API_KEY")
 
@@ -61,9 +66,10 @@ def gallery(request):
 
     return render(request, "gallery.html", {"images": images})
 
+
 def events_list(request):
     """Render the events page with first 20 events and celestial body positions"""
-    latitude, longitude = "38.8339", "-104.8214" # Colorado Springs, CO
+    latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
 
     try:
         events_data = fetch_all_events(latitude, longitude)
@@ -86,11 +92,33 @@ def events_list(request):
         except Exception as e:
             print(f"ERROR fetching celestial bodies: {e}")
 
+        # Fetch current moon phase
+        moon_phase = None
+        try:
+            moon_phase = fetch_moon_phase(
+                datetime.now(timezone.utc),
+                float(latitude),
+                float(longitude)
+            )
+        except Exception as e:
+            print(f"ERROR fetching moon phase: {e}")
+
+        # Fetch upcoming solar eclipses
+        solar_eclipses = []
+        try:
+            solar_eclipses = fetch_solar_eclipse_data()
+            if isinstance(solar_eclipses, dict) and 'response' in solar_eclipses:
+                solar_eclipses = list(solar_eclipses['response'].values())[:5]  # Get next 5
+        except Exception as e:
+            print(f"ERROR fetching solar eclipses: {e}")
+
         return render(request, "events_list.html", {
             "events": initial_events,
             "has_more": has_more,
             "celestial_bodies": celestial_bodies,
-            "loaction": "Colorado Springs, CO"
+            "location": "Colorado Springs, CO",
+            "moon_phase": moon_phase,
+            "solar_eclipses": solar_eclipses,
         })
     except Exception as e:
         print(f"ERROR in events_list: {e}")
@@ -98,8 +126,11 @@ def events_list(request):
             "events": [],
             "has_more": False,
             "celestial_bodies": [],
-            "location": "Colorado Springs, CO"
+            "location": "Colorado Springs, CO",
+            "moon_phase": None,
+            "solar_eclipses": [],
         })
+
 
 def _earliest_peak_from_events(events):
     """Return the earliest peak date string across an events list."""
@@ -120,12 +151,13 @@ def _earliest_peak_from_events(events):
             return earliest.replace(tzinfo=None).isoformat() + "Z"
     return earliest.isoformat()
 
+
 def events_api(request):
     """Return events with offset/limit and proper has_more; return 500 on catastrophic failure."""
     try:
         offset = int(request.GET.get("offset", 0))
         limit = int(request.GET.get("limit", 20))
-        latitude, longitude = "38.8339", "-104.8214" # Colorado Springs, CO
+        latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
 
         all_events = fetch_all_events(latitude, longitude)
         total = len(all_events)
@@ -152,10 +184,17 @@ def events_api(request):
             "message": str(e),
         }, status=500)
 
+
 def fetch_all_events(latitude, longitude):
-    """Fetch events, dedupe by (peak, body), and sort chronologically with a stable body tie-break."""
-    celestial_bodies = ["sun","moon","mercury","venus","mars",
-                        "jupiter","saturn","uranus","neptune","pluto"]
+    """
+    Fetch events from Radiant Drift (sun/moon) and dedupe by (peak, body).
+    Sort chronologically with a stable body tie-break.
+    
+    Note: Radiant Drift only provides data for sun and moon.
+    Planet events are not available.
+    """
+    # Radiant Drift only supports sun and moon
+    celestial_bodies = ["sun", "moon"]
 
     events_data = []
     seen = set()  # (peak_date_str, body_name)
@@ -176,9 +215,14 @@ def fetch_all_events(latitude, longitude):
                 events = row.get("events") or []
                 peak_date = _earliest_peak_from_events(events)
                 if not peak_date:
-                    continue
+                    # Use transit time as peak if available
+                    transit = row.get("transit")
+                    if transit and transit.get("date"):
+                        peak_date = transit.get("date")
+                    else:
+                        continue
 
-                # NEW: dedupe on (peak, body) so Sun & Moon at same time both appear
+                # Dedupe on (peak, body) so Sun & Moon at same time both appear
                 dedup_key = (peak_date, base_name)
                 if dedup_key in seen:
                     continue
@@ -186,10 +230,11 @@ def fetch_all_events(latitude, longitude):
 
                 events_data.append({
                     "body": base_name,
-                    "type": (events[0].get("type") if events else None),
+                    "type": (events[0].get("type") if events else "rise-set"),
                     "peak": peak_date,
-                    "rise": row.get("rise"),
-                    "set": row.get("set"),
+                    "rise": row.get("rise", {}).get("date") if row.get("rise") else None,
+                    "set": row.get("set", {}).get("date") if row.get("set") else None,
+                    "transit": row.get("transit", {}).get("date") if row.get("transit") else None,
                     "obscuration": (row.get("extraInfo") or {}).get("obscuration"),
                     "highlights": (events[0].get("eventHighlights") if events else {}) or {},
                 })
@@ -198,9 +243,9 @@ def fetch_all_events(latitude, longitude):
             print(f"Error fetching {body} events: {e}")
 
     if successes == 0 and failures > 0:
-        raise RuntimeError("Upstream Astronomy API failure")
+        raise RuntimeError("Upstream Radiant Drift API failure")
 
-    # NEW: tie-break by body name so Moon sorts before Sun when times are equal
+    # Tie-break by body name so Moon sorts before Sun when times are equal
     events_data.sort(
         key=lambda e: (
             _parse_iso(e["peak"]) or datetime.max.replace(tzinfo=timezone.utc),
@@ -208,6 +253,7 @@ def fetch_all_events(latitude, longitude):
         )
     )
     return events_data
+
 
 def _parse_iso(dt_str: str):
     if not dt_str:
@@ -218,6 +264,7 @@ def _parse_iso(dt_str: str):
         return datetime.fromisoformat(val)
     except Exception:
         return None
+
 
 def get_apod_for_date(d):
     apod_base_url = "https://api.nasa.gov/planetary/apod"
@@ -237,9 +284,8 @@ def get_apod_for_date(d):
         print("NASA API request failed:", e)
     return None
 
-def find_most_recent_apod(max_days_back=30):
-    # today = date.today()
 
+def find_most_recent_apod(max_days_back=30):
     # Use actual date
     from datetime import date as date_class
     today = date_class(2025, 10, 1)  # Actual date
@@ -249,6 +295,7 @@ def find_most_recent_apod(max_days_back=30):
         if data:
             return data
     return None
+
 
 def index(request):
     """Render index page with APOD."""
@@ -262,6 +309,7 @@ def index(request):
         "apod": apod  # Could be None if fetch failed
     }
     return render(request, "index.html", context)
+
 
 def register(request):
     if request.method == 'POST':
