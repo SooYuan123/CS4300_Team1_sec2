@@ -5,16 +5,22 @@ from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+
 from datetime import date, datetime, timezone, timedelta
 import os
 import requests
 from dotenv import load_dotenv
+
 from .models import Favorite
 from .utils import (
     fetch_astronomical_events,
     fetch_twilight_events,
     fetch_meteor_shower_events,
     fetch_fireball_events,
+    get_celestial_bodies_with_visibility,
+    fetch_rise_set_times,
+    fetch_moon_phase,
+    fetch_solar_eclipse_data,
 )
 
 load_dotenv()
@@ -71,8 +77,14 @@ def gallery(request):
 # Events pages / API
 # -------------------------
 def events_list(request):
-    """Render the events page with first 20 events"""
-    latitude, longitude = "38.775867", "-84.39733"
+    """Render the events page with first 20 events and celestial body positions"""
+    latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
+
+    # Defaults in case downstream calls fail
+    celestial_bodies = []
+    moon_phase = None
+    solar_eclipses = []
+
     try:
         events_data = fetch_all_events(latitude, longitude)
         print(f"DEBUG: Fetched {len(events_data)} total events")
@@ -80,13 +92,54 @@ def events_list(request):
         initial_events = events_data[:20]
         has_more = len(events_data) > 20
 
+        print(f"DEBUG: Initial events: {len(initial_events)}, has_more: {has_more}")
+
+        # Fetch Celestial Body Positions
+        try:
+            celestial_bodies = get_celestial_bodies_with_visibility(
+                latitude=float(latitude),
+                longitude=float(longitude)
+            )
+            print(f"DEBUG: Fetched {len(celestial_bodies)} celestial bodies")
+        except Exception as e:
+            print(f"ERROR fetching celestial bodies: {e}")
+
+        # Fetch current moon phase
+        try:
+            moon_phase = fetch_moon_phase(
+                datetime.now(timezone.utc),
+                float(latitude),
+                float(longitude)
+            )
+        except Exception as e:
+            print(f"ERROR fetching moon phase: {e}")
+
+        # Fetch upcoming solar eclipses
+        try:
+            solar_eclipses = fetch_solar_eclipse_data()
+            if isinstance(solar_eclipses, dict) and 'response' in solar_eclipses:
+                solar_eclipses = list(solar_eclipses['response'].values())[:5]  # Get next 5
+        except Exception as e:
+            print(f"ERROR fetching solar eclipses: {e}")
+
         return render(request, "events_list.html", {
             "events": initial_events,
-            "has_more": has_more
+            "has_more": has_more,
+            "celestial_bodies": celestial_bodies,
+            "location": "Colorado Springs, CO",
+            "moon_phase": moon_phase,
+            "solar_eclipses": solar_eclipses,
         })
     except Exception as e:
         print(f"ERROR in events_list: {e}")
-        return render(request, "events_list.html", {"events": [], "has_more": False})
+        return render(request, "events_list.html", {
+            "events": [],
+            "has_more": False,
+            "celestial_bodies": [],
+            "location": "Colorado Springs, CO",
+            "moon_phase": None,
+            "solar_eclipses": [],
+        })
 
 
 def _earliest_peak_from_events(events):
@@ -113,7 +166,7 @@ def events_api(request):
     try:
         offset = int(request.GET.get("offset", 0))
         limit = int(request.GET.get("limit", 20))
-        latitude, longitude = "38.775867", "-84.39733"
+        latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
 
         all_events = fetch_all_events(latitude, longitude)
         total = len(all_events)
@@ -170,8 +223,14 @@ def fetch_all_events(latitude, longitude):
                 events = row.get("events") or []
                 peak_date = _earliest_peak_from_events(events)
                 if not peak_date:
-                    continue
+                    # Use transit time as peak if available
+                    transit = row.get("transit")
+                    if transit and transit.get("date"):
+                        peak_date = transit.get("date")
+                    else:
+                        continue
 
+                # Dedupe on (peak, body) so Sun & Moon at same time both appear
                 dedup_key = (peak_date, base_name)
                 if dedup_key in seen:
                     continue
@@ -179,10 +238,11 @@ def fetch_all_events(latitude, longitude):
 
                 events_data.append({
                     "body": base_name,
-                    "type": (events[0].get("type") if events else None),
+                    "type": (events[0].get("type") if events else "rise-set"),
                     "peak": peak_date,
-                    "rise": row.get("rise"),
-                    "set": row.get("set"),
+                    "rise": row.get("rise", {}).get("date") if row.get("rise") else None,
+                    "set": row.get("set", {}).get("date") if row.get("set") else None,
+                    "transit": row.get("transit", {}).get("date") if row.get("transit") else None,
                     "obscuration": (row.get("extraInfo") or {}).get("obscuration"),
                     "highlights": (events[0].get("eventHighlights") if events else {}) or {},
                 })
@@ -224,7 +284,7 @@ def fetch_all_events(latitude, longitude):
 
     # If Astronomy API completely failed for every body, surface a hard error
     if successes == 0 and failures > 0:
-        raise RuntimeError("Upstream Astronomy API failure")
+        raise RuntimeError("Upstream Radiant Drift API failure")
 
     print(f"Total events fetched from all sources: {len(events_data)}")
 
@@ -239,14 +299,24 @@ def fetch_all_events(latitude, longitude):
 
 
 def _parse_iso(dt_str: str):
+    """
+    Parse an ISO datetime string and always return an offset-aware UTC datetime.
+
+    - Converts trailing 'Z' to '+00:00'
+    - If no timezone info is present, assume UTC
+    """
     if not dt_str:
         return None
+
     val = dt_str.replace("Z", "+00:00")  # handle trailing 'Z'
     try:
-        return datetime.fromisoformat(val)
+        dt = datetime.fromisoformat(val)
+        if dt.tzinfo is None:
+            # Assume UTC if no tzinfo provided
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except Exception:
         return None
-
 
 # -------------------------
 # Index (html-images feature: JWST/NASA)
