@@ -45,9 +45,13 @@ def get_radiant_drift_auth_header():
 
 
 def get_solar_system_auth_header():
-    """SSOD API uses SSOD_APP_ID (not Bearer token)."""
+    """
+    Solar System OpenData (le-systeme-solaire.net) auth:
+      Authorization: Bearer <token>
+    """
     api_key = getattr(settings, "SSOD_APP_ID", None) or os.getenv("SSOD_APP_ID")
-    return {"x-api-key": api_key} if api_key else {}
+    return {"Authorization": f"Bearer {api_key}"} if api_key else {}
+
 
 # -------------------------
 # Astronomy API (general celestial events)
@@ -290,7 +294,7 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
 # Open-Meteo – twilight events
 # -------------------------
 def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
-    """Open-Meteo: returns list of twilight events; logs and returns [] on error."""
+    """Open-Meteo: returns list of sunrise/sunset events; logs and returns [] on error."""
     try:
         today = datetime.now(timezone.utc).date()
 
@@ -303,7 +307,8 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
         params = {
             "latitude": float(latitude),
             "longitude": float(longitude),
-            "daily": "sunrise,sunset,astronomical_twilight_start,astronomical_twilight_end",
+            # ✅ Only use supported daily variables
+            "daily": "sunrise,sunset",
             "start_date": str(from_date),
             "end_date": str(to_date),
             "timezone": "auto",
@@ -312,53 +317,51 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
         r.raise_for_status()
         data = r.json() or {}
         daily = data.get("daily", {})
-        times = daily.get("time", []) or []
+        dates = daily.get("time", []) or []
+        sunrises = daily.get("sunrise", []) or []
+        sunsets = daily.get("sunset", []) or []
 
         events = []
-        tw_start = daily.get("astronomical_twilight_start", []) or []
-        tw_end = daily.get("astronomical_twilight_end", []) or []
+        for i, date_str in enumerate(dates):
+            # Sunrise
+            if i < len(sunrises) and sunrises[i]:
+                events.append({
+                    "body": "Sun",
+                    "type": "Sunrise",
+                    "peak": sunrises[i],
+                    "rise": sunrises[i],
+                    "set": None,
+                    "obscuration": None,
+                    "highlights": {
+                        "source": "open_meteo",
+                        "category": "twilight",
+                        "description": "Local sunrise time",
+                    },
+                })
+            # Sunset
+            if i < len(sunsets) and sunsets[i]:
+                events.append({
+                    "body": "Sun",
+                    "type": "Sunset",
+                    "peak": sunsets[i],
+                    "rise": sunsets[i],
+                    "set": None,
+                    "obscuration": None,
+                    "highlights": {
+                        "source": "open_meteo",
+                        "category": "twilight",
+                        "description": "Local sunset time",
+                    },
+                })
 
-        for i, date_str in enumerate(times):
-            if i < len(tw_start) and tw_start[i]:
-                events.append({
-                    "body": "Sun",
-                    "type": "Astronomical Twilight Start",
-                    "peak": f"{date_str}T{tw_start[i]}",
-                    "rise": tw_start[i],
-                    "set": None,
-                    "obscuration": None,
-                    "highlights": {
-                        "source": "open_meteo",
-                        "category": "twilight",
-                        "description": "Beginning of astronomical twilight",
-                    },
-                })
-            if i < len(tw_end) and tw_end[i]:
-                events.append({
-                    "body": "Sun",
-                    "type": "Astronomical Twilight End",
-                    "peak": f"{date_str}T{tw_end[i]}",
-                    "rise": tw_end[i],
-                    "set": None,
-                    "obscuration": None,
-                    "highlights": {
-                        "source": "open_meteo",
-                        "category": "twilight",
-                        "description": "End of astronomical twilight",
-                    },
-                })
         return events
     except HTTPError as e:
-        # Handle known “too long range” cleanly
         status = getattr(e.response, "status_code", None)
         print(f"Open-Meteo HTTP {status} for twilight events; returning [].")
         return []
     except Exception as e:
         print(f"Error fetching twilight events: {e}")
         return []
-
-
-
 
 # -------------------------
 # AMS Meteors – showers + fireballs (optional)
