@@ -299,14 +299,24 @@ def fetch_all_events(latitude, longitude):
 
 
 def _parse_iso(dt_str: str):
+    """
+    Parse an ISO datetime string and always return an offset-aware UTC datetime.
+
+    - Converts trailing 'Z' to '+00:00'
+    - If no timezone info is present, assume UTC
+    """
     if not dt_str:
         return None
+
     val = dt_str.replace("Z", "+00:00")  # handle trailing 'Z'
     try:
-        return datetime.fromisoformat(val)
+        dt = datetime.fromisoformat(val)
+        if dt.tzinfo is None:
+            # Assume UTC if no tzinfo provided
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except Exception:
         return None
-
 
 # -------------------------
 # Index (html-images feature: JWST/NASA)
