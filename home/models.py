@@ -73,10 +73,7 @@ class UserProfile(models.Model):
         return f"{self.user.username}'s Profile"
 
     def get_profile_picture_url(self):
-        """Return profile picture URL or default avatar"""
-        if self.profile_picture:
-            return self.profile_picture.url
-        # Placeholder service if no image
+        """Return default avatar placeholder"""
         return f'https://ui-avatars.com/api/?name={self.user.username}&size=200&background=random'
 
 
