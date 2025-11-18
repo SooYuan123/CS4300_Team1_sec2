@@ -294,8 +294,12 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
     """Open-Meteo: returns list of twilight events; logs and returns [] on error."""
     try:
         today = datetime.now(timezone.utc).date()
-        to_date = to_date or (today + timedelta(days=1095))
-        from_date = from_date or (today - timedelta(days=365))
+
+        # Keep the range small so Open-Meteo stays happy (forecast API).
+        if from_date is None:
+            from_date = today
+        if to_date is None:
+            to_date = today + timedelta(days=30)  # ~1 month ahead
 
         params = {
             "latitude": float(latitude),
@@ -345,9 +349,16 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
                     },
                 })
         return events
+    except HTTPError as e:
+        # Handle known “too long range” cleanly
+        status = getattr(e.response, "status_code", None)
+        print(f"Open-Meteo HTTP {status} for twilight events; returning [].")
+        return []
     except Exception as e:
         print(f"Error fetching twilight events: {e}")
         return []
+
+
 
 
 # -------------------------
