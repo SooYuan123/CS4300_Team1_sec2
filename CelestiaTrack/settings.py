@@ -25,7 +25,15 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ASTRONOMY_API_APP_ID = config('ASTRONOMY_API_APP_ID', default='')
 ASTRONOMY_API_APP_SECRET = config('ASTRONOMY_API_APP_SECRET', default='')
-AMS_METEORS_API_KEY = config('AMS_METEORS_API_KEY', default='')  # optional but nice to have
+
+# Radiant Drift API
+RADIANT_DRIFT_API_KEY = os.getenv('RADIANT_DRIFT_API_KEY')
+
+# Solar System OpenData API
+SSOD_APP_ID = config('SSOD_APP_ID', default=None)
+
+# AMS Meteors API (optional but nice to have)
+AMS_METEORS_API_KEY = config('AMS_METEORS_API_KEY', default='')
 
 SECRET_KEY = config('SECRETKEY', default='django-insecure-j78f(bqzq4)^o!%&8^=iin%os)&t+89phd=^0&g4pvl+^%eeb')
 
@@ -119,7 +127,7 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # for localhost testing
-#STATIC_ROOT = os.path.join(BASE_DIR, 'home/static/')
+# STATIC_ROOT = os.path.join(BASE_DIR, 'home/static/')
 
 # IMPORTANT: do not set STATICFILES_DIRS for an app's own static folder.
 # Django will auto-discover home/static/**
