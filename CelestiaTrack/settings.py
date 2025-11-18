@@ -128,21 +128,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Use non-manifest storage for tests/CI; use manifest on Render/prod.
 USE_MANIFEST_STATIC = config('USE_MANIFEST_STATIC', default=False, cast=bool)
 
-# WhiteNoise storage (Django 5.x way)
-STORAGES = {
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    }
-}
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Optional production hardening (off by default, enabled via env on Render)
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
-
-# Optional: make sure tests NEVER force HTTPS/cookie security
+# WhiteNoise and Cloudinary storage configuration (Django 5.x)
 if os.getenv('PYTEST_CURRENT_TEST') or not USE_MANIFEST_STATIC:
     # Test/dev: no manifest, so no collectstatic required for tests
     STORAGES = {
@@ -150,22 +136,30 @@ if os.getenv('PYTEST_CURRENT_TEST') or not USE_MANIFEST_STATIC:
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     }
 else:
-    # Prod/Render: hashed filenames + compression
+    # Prod/Render: use Cloudinary for media, whitenoise for static
     STORAGES = {
-        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
     }
 
+# Cloudinary Configuration
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', ''),
     'API_KEY': os.getenv('CLOUDINARY_API_KEY', ''),
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', ''),
 }
 
-# Use Cloudinary for media storage in production
-if not DEBUG:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
-# Media files (for local development)
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Optional production hardening (off by default, enabled via env on Render)
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
