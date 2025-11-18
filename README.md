@@ -18,7 +18,7 @@ Each event is displayed in a clean, responsive Bootstrap layout with details suc
    ASTRONOMY_API_APP_SECRET=your_app_secret_here  
    NASA_API_KEY=your_key_here  
    JWST_API_KEY=your_key_here  
-You can obtain your credentials by registering at [astronomyapi.com](astronomyapi.com) or [api.nasa.gov](https://api.nasa.gov/#:~:text=Browse%20APIs-,Generate%20API%20Key,-Required%20fields%20are)
+   SSOD_APP_ID=solar_system_app_id_here  
 
 6. Run migrations
    ```bash
@@ -29,4 +29,4 @@ You can obtain your credentials by registering at [astronomyapi.com](astronomyap
 - Open browser at http://127.0.0.1:3000/
 
 ## Run it on the web
-https://cs4300-team1-celestiatrack.onrender.com/
+https://celestiatrack.xyz/
