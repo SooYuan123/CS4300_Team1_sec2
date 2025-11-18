@@ -21,13 +21,12 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ASTRONOMY_API_APP_ID = config('ASTRONOMY_API_APP_ID', default='')
 ASTRONOMY_API_APP_SECRET = config('ASTRONOMY_API_APP_SECRET', default='')
-SSOD_APP_ID = config('SSOD_APP_ID', default='')
 
 # Radiant Drift API
 RADIANT_DRIFT_API_KEY = os.getenv('RADIANT_DRIFT_API_KEY')
 
 # Solar System OpenData API
-SOLAR_SYSTEM_API_KEY = os.getenv('SOLAR_SYSTEM_API_KEY')
+SSOD_APP_ID = config('SSOD_APP_ID', default=None)
 
 # AMS Meteors API (optional but nice to have)
 AMS_METEORS_API_KEY = config('AMS_METEORS_API_KEY', default='')

@@ -45,10 +45,9 @@ def get_radiant_drift_auth_header():
 
 
 def get_solar_system_auth_header():
-    """Get authorization header for Solar System OpenData API (if ever needed)."""
-    api_key = getattr(settings, "SOLAR_SYSTEM_API_KEY", None) or os.getenv("SOLAR_SYSTEM_API_KEY")
-    return {"Authorization": f"Bearer {api_key}"} if api_key else {}
-
+    """SSOD API uses SSOD_APP_ID (not Bearer token)."""
+    api_key = getattr(settings, "SSOD_APP_ID", None) or os.getenv("SSOD_APP_ID")
+    return {"x-api-key": api_key} if api_key else {}
 
 # -------------------------
 # Astronomy API (general celestial events)
@@ -463,7 +462,11 @@ def fetch_celestial_body_positions():
 
     for body in celestial_bodies:
         try:
-            response = requests.get(f"{SOLAR_SYSTEM_API_BASE}/{body}", timeout=5)
+            response = requests.get(
+                f"{SOLAR_SYSTEM_API_BASE}/{body}",
+                headers=get_solar_system_auth_header(),
+                timeout=5
+            )
             if response.status_code == 200:
                 data = response.json()
 
