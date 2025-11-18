@@ -45,12 +45,12 @@ class UserProfile(models.Model):
         blank=True,
         help_text="Tell us about yourself"
     )
-    profile_picture = models.ImageField(
-        upload_to='profile_pics/',
-        blank=True,
-        null=True,
-        help_text="Upload a profile picture"
-    )
+    #profile_picture = models.ImageField(
+    #    upload_to='profile_pics/',
+    #    blank=True,
+    #    null=True,
+    #    help_text="Upload a profile picture"
+    #)
     location = models.CharField(
         max_length=100,
         blank=True,

@@ -42,7 +42,7 @@
               {% endif %}
 
               <!-- Profile Edit Form -->
-              <form method="POST" enctype="multipart/form-data">
+              <form method="POST">
                 {% csrf_token %}
 
                 <!-- User Information -->
@@ -108,33 +108,14 @@
                   </div>
 
                   <div class="mb-3">
-                    <label for="{{ profile_form.favorite_celestial_body.id_for_label }}" class="form-label">Favorite Celestial Object</label>
+                    <label for="{{ profile_form.favorite_celestial_body.id_for_label }}" class="form-label">Favorite Celestial Objects</label>
                     {{ profile_form.favorite_celestial_body }}
                     {% if profile_form.favorite_celestial_body.errors %}
                       <div class="text-danger">{{ profile_form.favorite_celestial_body.errors }}</div>
                     {% endif %}
-                  </div>
-
-                  <div class="mb-3">
-                    <label for="{{ profile_form.profile_picture.id_for_label }}" class="form-label">Profile Picture</label>
-                    {{ profile_form.profile_picture }}
-                    {% if profile_form.profile_picture.errors %}
-                      <div class="text-danger">{{ profile_form.profile_picture.errors }}</div>
-                    {% endif %}
                     <small class="form-text text-muted d-block mt-1">
-                      Recommended: Square image, at least 200x200 pixels
+                      Separate multiple objects with commas (e.g., Mars, Jupiter, Andromeda Galaxy)
                     </small>
-
-                    <!-- Current profile picture preview -->
-                    {% if user.profile.profile_picture %}
-                    <div class="mt-2">
-                      <p class="mb-1"><strong>Current picture:</strong></p>
-                      <img src="{{ user.profile.get_profile_picture_url }}"
-                           alt="Current profile picture"
-                           class="rounded"
-                           style="width: 100px; height: 100px; object-fit: cover; border: 2px solid #00d4ff;">
-                    </div>
-                    {% endif %}
                   </div>
                 </fieldset>
 

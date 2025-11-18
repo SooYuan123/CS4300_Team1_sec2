@@ -37,7 +37,7 @@ class ProfileUpdateForm(forms.ModelForm):
 
     class Meta:
         model = UserProfile
-        fields = ['bio', 'location', 'favorite_celestial_body', 'profile_picture']
+        fields = ['bio', 'location', 'favorite_celestial_body']
         widgets = {
             'bio': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -50,10 +50,6 @@ class ProfileUpdateForm(forms.ModelForm):
             }),
             'favorite_celestial_body': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Your favorite celestial object'
-            }),
-            'profile_picture': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': 'image/*'
+                'placeholder': 'e.g., Mars, Jupiter, Andromeda Galaxy'
             }),
         }

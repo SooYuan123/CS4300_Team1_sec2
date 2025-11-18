@@ -6,6 +6,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.conf import settings
+from django import forms
 from datetime import date, datetime, timezone, timedelta
 import os
 import requests
@@ -351,6 +352,33 @@ def index(request):
 # -------------------------
 # Auth
 # -------------------------
+class CustomUserCreationForm(UserCreationForm):
+    """Custom registration form with required email"""
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Email address'
+        })
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password1', 'password2')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add Bootstrap classes to all fields
+        for field_name in ['username', 'password1', 'password2']:
+            self.fields[field_name].widget.attrs['class'] = 'form-control'
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        if commit:
+            user.save()
+        return user
+
 def register(request):
     if request.method == "POST":
         form = UserCreationForm(request.POST)
