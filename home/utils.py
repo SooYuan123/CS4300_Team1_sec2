@@ -298,16 +298,25 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
     try:
         today = datetime.now(timezone.utc).date()
 
-        # Keep the range small so Open-Meteo stays happy (forecast API).
+        # Default range: today → up to 16 days ahead (Open-Meteo forecast limit)
         if from_date is None:
             from_date = today
         if to_date is None:
-            to_date = today + timedelta(days=30)  # ~1 month ahead
+            to_date = today + timedelta(days=16)
+        else:
+            # Never ask for more than 16 days into the future
+            max_end = today + timedelta(days=16)
+            if to_date > max_end:
+                to_date = max_end
+
+        # Guard: if we somehow ended up with an invalid range
+        if to_date < from_date:
+            print(f"Open-Meteo: invalid date range {from_date} → {to_date}, returning [].")
+            return []
 
         params = {
             "latitude": float(latitude),
             "longitude": float(longitude),
-            # ✅ Only use supported daily variables
             "daily": "sunrise,sunset",
             "start_date": str(from_date),
             "end_date": str(to_date),
@@ -362,6 +371,7 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
     except Exception as e:
         print(f"Error fetching twilight events: {e}")
         return []
+
 
 # -------------------------
 # AMS Meteors – showers + fireballs (optional)
