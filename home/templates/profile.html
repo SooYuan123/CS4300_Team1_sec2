@@ -41,7 +41,7 @@
 
               <!-- Full Name -->
               {% if profile_user.first_name or profile_user.last_name %}
-              <p class="text-muted">
+              <p class="text-light">
                 {{ profile_user.first_name }} {{ profile_user.last_name }}
               </p>
               {% endif %}
@@ -107,22 +107,6 @@
           </div>
           {% endif %}
 
-          <!-- Favorite Events -->
-          <div class="card bg-dark text-light border-info">
-            <div class="card-header bg-transparent border-info">
-              <h4 class="text-glow">Favorite Events</h4>
-            </div>
-            <div class="card-body">
-              <p class="text-muted">
-                {% if is_own_profile %}
-                  Your favorite events will appear here.
-                {% else %}
-                  {{ profile_user.username }}'s favorite events will appear here.
-                {% endif %}
-              </p>
-              <!-- TODO: Add favorite events gallery here -->
-            </div>
-          </div>
         </div>
       </div>
     </div>
