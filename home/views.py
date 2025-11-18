@@ -381,7 +381,7 @@ class CustomUserCreationForm(UserCreationForm):
 
 def register(request):
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
             messages.success(request, "Account created! You are now logged in.")
