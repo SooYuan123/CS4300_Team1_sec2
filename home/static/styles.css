@@ -222,4 +222,14 @@
     color: gold;
     transform: scale(1.1);
   }
-  
+
+  /* Video embed styling for APOD */
+.apod-section .ratio-16x9 {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(0, 188, 212, 0.3);
+}
+
+.apod-section iframe {
+  border: 2px solid rgba(0, 212, 255, 0.3);
+}
