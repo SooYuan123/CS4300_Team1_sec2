@@ -294,34 +294,22 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
 # Open-Meteo – twilight events
 # -------------------------
 def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
-    """Open-Meteo: returns list of sunrise/sunset events; logs and returns [] on error."""
+    """
+    Open-Meteo: returns list of sunrise/sunset events; logs and returns [] on error.
+
+    We keep this deliberately simple to avoid 400s:
+      - No start_date / end_date
+      - Use default forecast window (7 days) and no past days
+    """
     try:
-        today = datetime.now(timezone.utc).date()
-
-        # Default range: today → up to 16 days ahead (Open-Meteo forecast limit)
-        if from_date is None:
-            from_date = today
-        if to_date is None:
-            to_date = today + timedelta(days=16)
-        else:
-            # Never ask for more than 16 days into the future
-            max_end = today + timedelta(days=16)
-            if to_date > max_end:
-                to_date = max_end
-
-        # Guard: if we somehow ended up with an invalid range
-        if to_date < from_date:
-            print(f"Open-Meteo: invalid date range {from_date} → {to_date}, returning [].")
-            return []
-
         params = {
             "latitude": float(latitude),
             "longitude": float(longitude),
             "daily": "sunrise,sunset",
-            "start_date": str(from_date),
-            "end_date": str(to_date),
             "timezone": "auto",
+            "past_days": 0,   # no past days, just upcoming
         }
+
         r = requests.get(OPEN_METEO_API_BASE, params=params, timeout=15)
         r.raise_for_status()
         data = r.json() or {}
@@ -337,7 +325,7 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
                 events.append({
                     "body": "Sun",
                     "type": "Sunrise",
-                    "peak": sunrises[i],
+                    "peak": sunrises[i],  # ISO timestamp from API
                     "rise": sunrises[i],
                     "set": None,
                     "obscuration": None,
@@ -366,12 +354,12 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
         return events
     except HTTPError as e:
         status = getattr(e.response, "status_code", None)
+        # Try to log something useful without spamming the full response
         print(f"Open-Meteo HTTP {status} for twilight events; returning [].")
         return []
     except Exception as e:
         print(f"Error fetching twilight events: {e}")
         return []
-
 
 # -------------------------
 # AMS Meteors – showers + fireballs (optional)
