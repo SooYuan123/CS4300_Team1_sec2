@@ -137,13 +137,16 @@ if os.getenv('PYTEST_CURRENT_TEST') or not USE_MANIFEST_STATIC:
 else:
     # Prod/Render: use Cloudinary for media, whitenoise for static
     STORAGES = {
-        "default": {
-            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage" if not DEBUG else "django.core.files.storage.FileSystemStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+
     }
+
+# Tell Django where to find static files
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 
 # Cloudinary Configuration
 CLOUDINARY_STORAGE = {
