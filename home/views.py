@@ -395,7 +395,7 @@ def index(request):
     use_jwst = True  # set False to use NASA APOD fallback
 
     try:
-        jwst_image = get_jwst_random_image() if use_jst else find_most_recent_apod()
+        jwst_image = get_jwst_random_image() if use_jwst else find_most_recent_apod()
     except Exception as e:
         print("Error fetching space image:", e)
 
