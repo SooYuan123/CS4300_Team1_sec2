@@ -133,64 +133,70 @@
       color: #00eaff !important;
       text-shadow: 0 0 8px #00eaff;
     }
-
-  /* Carousel layout */
-  #spaceCarousel {
-    max-width: 900px;
-    margin: 0 auto;
-    overflow: hidden;
-    position: relative;
-  }
-
-  #spaceCarousel .carousel-inner {
-    border-radius: 15px;
-  }
-
-  /* Image styling */
-  #spaceCarousel .carousel-item img {
-    width: 100%;
-    height: 400px;
-    object-fit: cover;
-  }
-
-  /* Smooth zoom on active image */
-  #spaceCarousel .carousel-item.active img {
-    transform: scale(1.05);
-  }
-
-  #spaceCarousel .carousel-item:not(.active) img {
-    transform: scale(1); /* Reset non-active images */
-  }
-
-  /* responsive scaling for smaller screens */
-  @media (max-width: 768px) {
-    #spaceCarousel .carousel-item img {
-      height: 250px;
-    }
-  }
-
-
-
-  /* Container section for the carousel */
-  .carousel-section {
+  
+  /* Section centers the swiper vertically and horizontally */
+  #featured-gallery {
+    min-height: 100vh; /* full viewport height */
     display: flex;
-    justify-content: center;
     align-items: center;
-    height: 100vh; /* Full viewport height for centering */
-    background: linear-gradient(135deg, #0a0a0a, #1c1c1c); /* Stylish dark background */
+    justify-content: center;
+    background: radial-gradient(circle at center, #0a0a0a 60%, #000);
+    text-align: center;
+    position: relative;
     overflow: hidden;
-    padding: 2rem;
+    
   }
 
-  /* The carousel itself */
-  .carousel-container {
-    position: relative;
-    width: 50vw;  /* 50% of viewport width */
-    height: 50vh; /* 50% of viewport height */
-    overflow: hidden;
-    border-radius: 1.5rem;
-    box-shadow: 0 0 20px rgba(0, 255, 100, 0.3);
+  .gallery-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
   }
+
+  /* Swiper styling */
+  .mySwiper {
+    width: 80%;
+    max-width: 900px;
+    height: 500px;
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+  }
+
+  /* Center each image */
+  .swiper-slide {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+
+  .swiper-slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+    transition: transform 0.4s ease;
+  }
+
+  .swiper-slide:hover img {
+    transform: scale(1.02);
+  }
+
+  /* Soft background glow overlay */
+  #swiper-glow {
+    filter: blur(120px);
+    opacity: 0.4;
+    transition: background-color 0.6s ease;
+    pointer-events: none;
+  }
+
 
   .apod-section img {
     max-width: 90%;
@@ -200,3 +206,20 @@
   .apod-section img:hover {
     transform: scale(1.025);
   }
+
+  .favorite-star {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 1.6rem;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: transform 0.2s ease, color 0.2s ease;
+    z-index: 10;
+  }
+  
+  .favorite-star:hover {
+    color: gold;
+    transform: scale(1.1);
+  }
+  

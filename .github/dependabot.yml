@@ -1,0 +1,53 @@
+# Dependabot configuration for CelestiaTrack
+# This file configures automated dependency updates and security vulnerability scanning
+
+version: 2
+updates:
+  # Monitor pip dependencies (Python/Django project)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"  # Check for updates weekly
+      day: "monday"       # Run checks every Monday
+      time: "09:00"       # At 9:00 AM UTC
+    open-pull-requests-limit: 10  # Max number of open PRs at once
+    labels:
+      - "dependencies"
+      - "python"
+      - "security"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    # Automatically rebase PRs when base branch is updated
+    rebase-strategy: "auto"
+    # Group related updates together
+    groups:
+      django-ecosystem:
+        patterns:
+          - "django*"
+          - "djangorestframework*"
+      testing:
+        patterns:
+          - "pytest*"
+          - "coverage"
+      linting:
+        patterns:
+          - "pylint*"
+          - "flake8*"
+          - "black*"
+          - "isort*"
+
+  # Monitor GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
