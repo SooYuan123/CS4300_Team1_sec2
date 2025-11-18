@@ -16,8 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import path
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from home.views import index, events_list, events_api, register, gallery, toggle_favorite, favorites
+from home import views
 
 urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='auth/login.html'), name='login'),
@@ -29,4 +32,13 @@ urlpatterns = [
     path('gallery/', gallery, name='gallery'),
     path('toggle-favorite/', toggle_favorite, name='toggle_favorite'),
     path('favorites/', favorites, name='favorites'),
+    path('admin/', admin.site.urls),
+    # Profile URLs
+    path('profile/edit/', views.profile_edit, name='profile_edit'),
+    path('profile/', views.profile_view, name='profile'),
+    path('profile/<str:username>/', views.profile_view, name='profile'),
 ]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

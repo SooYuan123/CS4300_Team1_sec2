@@ -409,6 +409,7 @@ class RegisterTests(TestCase):
         """Test successful registration."""
         response = self.client.post(reverse('register'), {
             'username': 'newuser',
+            'email': 'newuser@example.com',
             'password1': 'strongpass123',
             'password2': 'strongpass123'
         })
@@ -420,6 +421,7 @@ class RegisterTests(TestCase):
         """Test registration with invalid data."""
         response = self.client.post(reverse('register'), {
             'username': '',
+            'email': '',
             'password1': 'a',
             'password2': 'b'
         })
@@ -459,13 +461,13 @@ def test_register_get(client):
 @pytest.mark.django_db
 def test_register_post_success(client):
     response = client.post(reverse("register"),
-                           {"username": "newuser", "password1": "strongpass123", "password2": "strongpass123"})
+                           {"username": "newuser", "email": "newuser@example.com", "password1": "strongpass123", "password2": "strongpass123"})
     assert response.status_code == 302
     assert User.objects.filter(username="newuser").exists()
 
 
 @pytest.mark.django_db
 def test_register_post_invalid(client):
-    response = client.post(reverse("register"), {"username": "", "password1": "a", "password2": "b"})
+    response = client.post(reverse("register"), {"username": "", "email": "", "password1": "a", "password2": "b"})
     assert response.status_code == 200
     assert "form" in response.context

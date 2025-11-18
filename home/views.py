@@ -1,17 +1,18 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.conf import settings
-
+from django import forms
 from datetime import date, datetime, timezone, timedelta
 import os
 import requests
 from dotenv import load_dotenv
-
-from .models import Favorite
+from .models import Favorite, UserProfile
+from .forms import UserUpdateForm, ProfileUpdateForm
 from .utils import (
     fetch_astronomical_events,
     fetch_twilight_events,
@@ -402,7 +403,7 @@ def find_most_recent_apod(max_days_back=30):
 def index(request):
     """Render index page with JWST image (fallback to APOD)."""
     jwst_image = None
-    use_jwst = True  # set False to use NASA APOD fallback
+    use_jwst = False  # set False to use NASA APOD fallback
 
     try:
         jwst_image = get_jwst_random_image() if use_jwst else find_most_recent_apod()
@@ -419,9 +420,36 @@ def index(request):
 # -------------------------
 # Auth
 # -------------------------
+class CustomUserCreationForm(UserCreationForm):
+    """Custom registration form with required email"""
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Email address'
+        })
+    )
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password1', 'password2')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add Bootstrap classes to all fields
+        for field_name in ['username', 'password1', 'password2']:
+            self.fields[field_name].widget.attrs['class'] = 'form-control'
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        if commit:
+            user.save()
+        return user
+
 def register(request):
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
             messages.success(request, "Account created! You are now logged in.")
@@ -460,3 +488,59 @@ def toggle_favorite(request):
 def favorites(request):
     favorites = Favorite.objects.filter(user=request.user)
     return render(request, "favorites.html", {"favorites": favorites})
+
+
+@login_required
+def profile_view(request, username=None):
+    """
+    Display user profile.
+    If username is provided, show that user's profile.
+    Otherwise, show the logged-in user's profile.
+    """
+    if username:
+        # View another user's profile
+        user = get_object_or_404(User, username=username)
+    else:
+        # View own profile
+        user = request.user
+
+    # Get or create profile
+    profile, created = UserProfile.objects.get_or_create(user=user)
+
+    context = {
+        'profile_user': user,
+        'profile': profile,
+        'is_own_profile': request.user == user,
+    }
+
+    return render(request, 'profile.html', context)
+
+
+@login_required
+def profile_edit(request):
+    """Edit user profile"""
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=request.user)
+        profile_form = ProfileUpdateForm(
+            request.POST,
+            request.FILES,
+            instance=request.user.profile
+        )
+
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('profile', username=request.user.username)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+        profile_form = ProfileUpdateForm(instance=request.user.profile)
+
+    context = {
+        'user_form': user_form,
+        'profile_form': profile_form,
+    }
+
+    return render(request, 'profile_edit.html', context)
