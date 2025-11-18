@@ -79,9 +79,9 @@
           <p>{{ space_image.date }}</p>
           {% if space_image.media_type == "image" %}
             <img src="{{ space_image.url }}" alt="{{ space_image.title }}" class="img-fluid rounded shadow-lg">
-          {% elif space_image.media_type == "video" %}
+          {% elif space_image.media_type == "video" or space_image.media_type == "other" %}
             <div class="ratio ratio-16x9">
-              <iframe src="{{ space_image.url }}" title="{{ space_image.title }}" allowfullscreen></iframe>
+              <iframe src="{{ space_image.url }}" title="{{ space_image.title }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
           {% endif %}
           <p class="mt-2">{{ space_image.explanation }}</p>
