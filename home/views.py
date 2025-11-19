@@ -11,7 +11,7 @@ from datetime import date, datetime, timezone, timedelta
 import os
 import requests
 from dotenv import load_dotenv
-from .models import Favorite, UserProfile
+from .models import Favorite, EventFavorite, UserProfile
 from .forms import UserUpdateForm, ProfileUpdateForm
 from .utils import (
     fetch_astronomical_events,
@@ -485,9 +485,40 @@ def toggle_favorite(request):
 
 
 @login_required
+def toggle_event_favorite(request):
+    body = request.POST.get("body")
+    type_ = request.POST.get("type")
+    peak = request.POST.get("peak", "")
+    rise = request.POST.get("rise", "")
+    transit = request.POST.get("transit", "")
+    set_ = request.POST.get("set", "")
+
+    fav, created = EventFavorite.objects.get_or_create(
+        user=request.user,
+        body=body,
+        type=type_,
+        peak=peak,
+        rise=rise,
+        transit=transit,
+        set=set_,
+    )
+
+    if not created:
+        fav.delete()
+        return JsonResponse({"favorited": False})
+
+    return JsonResponse({"favorited": True})
+
+
+@login_required
 def favorites(request):
-    favorites = Favorite.objects.filter(user=request.user)
-    return render(request, "favorites.html", {"favorites": favorites})
+    fav_images = Favorite.objects.filter(user=request.user)
+    fav_events = EventFavorite.objects.filter(user=request.user).order_by("-saved_at")
+
+    return render(request, "favorites.html", {
+        "favorites": fav_images,
+        "event_favorites": fav_events
+    })
 
 
 @login_required

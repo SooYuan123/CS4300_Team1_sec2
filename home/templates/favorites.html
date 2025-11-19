@@ -16,7 +16,23 @@
 {% include 'header.html' %}
 
 <div class="container py-5">
-  <h2 class="text-center mb-5" style="font-family: 'Orbitron', sans-serif;">Saved Favorites</h2>
+  <h2 class="text-center mb-5" style="font-family: 'Orbitron', sans-serif;">Favorite Events</h2>
+  {% if event_favorites %}
+  <div class="list-group mb-5">
+    {% for ev in event_favorites %}
+      <div class="list-group-item bg-dark text-light border-secondary mb-2">
+        <h5>{{ ev.body }} — {{ ev.type }}</h5>
+        <ul class="small">
+          {% if ev.peak %}<li><strong>Peak:</strong> {{ ev.peak }}</li>{% endif %}
+          {% if ev.rise %}<li><strong>Rise:</strong> {{ ev.rise }}</li>{% endif %}
+          {% if ev.transit %}<li><strong>Transit:</strong> {{ ev.transit }}</li>{% endif %}
+          {% if ev.set %}<li><strong>Set:</strong> {{ ev.set }}</li>{% endif %}
+        </ul>
+      </div>
+    {% endfor %}
+    </div>
+    {% endif %}
+  <h2 class="text-center mb-5" style="font-family: 'Orbitron', sans-serif;">Favorite Images</h2>
 
   {% if favorites %}
     <div class="row g-4">
@@ -41,8 +57,8 @@
     </div>
   {% else %}
     <div class="text-center">
-      <p class="lead">You haven’t saved any favorites yet!</p>
-      <a href="{% url 'gallery' %}" class="btn btn-outline-light mt-3">Back to Gallery</a>
+      <p class="lead">You haven’t saved any favorite images yet!</p>
+      <a href="{% url 'gallery' %}" class="btn btn-outline-light mt-3">Find in Gallery</a>
     </div>
   {% endif %}
 </div>

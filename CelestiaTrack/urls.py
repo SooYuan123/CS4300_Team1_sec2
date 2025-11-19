@@ -19,7 +19,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from home.views import index, events_list, events_api, register, gallery, toggle_favorite, favorites
+from home.views import index, events_list, events_api, register, gallery, toggle_favorite, toggle_event_favorite, favorites
 from home import views
 
 urlpatterns = [
@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/events/', events_api, name='events_api'),
     path('gallery/', gallery, name='gallery'),
     path('toggle-favorite/', toggle_favorite, name='toggle_favorite'),
+    path('toggle_event_favorite/', toggle_event_favorite, name='toggle_event_favorite'),
     path('favorites/', favorites, name='favorites'),
     path('admin/', admin.site.urls),
     # Profile URLs
