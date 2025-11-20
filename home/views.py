@@ -484,30 +484,51 @@ def toggle_favorite(request):
         return JsonResponse({'favorited': True})
 
 
-@login_required
 def toggle_event_favorite(request):
-    body = request.POST.get("body")
-    type_ = request.POST.get("type")
-    peak = request.POST.get("peak", "")
-    rise = request.POST.get("rise", "")
-    transit = request.POST.get("transit", "")
-    set_ = request.POST.get("set", "")
+    try:
+        print("RAW POST:", request.POST)
 
-    fav, created = EventFavorite.objects.get_or_create(
-        user=request.user,
-        body=body,
-        type=type_,
-        peak=peak,
-        rise=rise,
-        transit=transit,
-        set=set_,
-    )
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {'redirect': '/login/', 'message': 'Please login to add favorites.'},
+                status=401
+            )
 
-    if not created:
-        fav.delete()
-        return JsonResponse({"favorited": False})
+        event_id = request.POST.get("event_id")
+        print("EVENT ID RECEIVED:", event_id)
 
-    return JsonResponse({"favorited": True})
+        if not event_id:
+            return JsonResponse({"error": "Missing event_id"}, status=400)
+
+        fav = EventFavorite.objects.filter(user=request.user, event_id=event_id).first()
+        print("FOUND FAVORITE:", fav)
+
+        if fav:
+            fav.delete()
+            print("Deleted favorite.")
+            return JsonResponse({"favorited": False})
+
+        print("Creating new favorite…")
+        created_fav = EventFavorite.objects.create(
+            user=request.user,
+            event_id=event_id,
+            body=request.POST.get("body", ""),
+            type=request.POST.get("type", ""),
+            peak=request.POST.get("peak", ""),
+            rise=request.POST.get("rise", ""),
+            transit=request.POST.get("transit", ""),
+            set=request.POST.get("set", ""),
+        )
+        print("Created:", created_fav)
+
+        return JsonResponse({"favorited": True})
+
+    except Exception as e:
+        import traceback
+        print("ERROR IN toggle_event_favorite:")
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 
 @login_required

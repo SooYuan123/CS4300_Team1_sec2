@@ -181,6 +181,7 @@
             <div class="card bg-secondary text-light shadow-lg h-100">
               <div class="position-absolute top-0 end-0 p-2">
                 <i class="bi bi-globe-asia-australia favorite-event-toggle"
+                   data-event-id="{{ e.body }}_{{ e.type }}_{{ e.peak }}"
                    data-body="{{ e.body }}"
                    data-type="{{ e.type }}"
                    data-peak="{{ e.peak }}"
@@ -268,6 +269,7 @@
             <div class="card-body">
               <div class="position-absolute top-0 end-0 p-2">
                 <i class="bi bi-globe-asia-australia favorite-event-toggle"
+                  data-event-id="${event.body}_${event.type}_${event.peak}"
                   data-body="${event.body}"
                   data-type="${event.type}"
                   data-peak="${event.peak || ''}"
@@ -407,6 +409,18 @@ function initEventFavoriteButtons() {
 
       const iconEl = this;
 
+      // Generate eventID 
+      const eventId = `${iconEl.dataset.body}_${iconEl.dataset.type}_${iconEl.dataset.peak}`;
+
+      console.log("=== EVENT FAVORITE TOGGLE ===");
+      console.log("Body:", iconEl.dataset.body);
+      console.log("Type:", iconEl.dataset.type);
+      console.log("Peak:", iconEl.dataset.peak);
+      console.log("Rise:", iconEl.dataset.rise);
+      console.log("Transit:", iconEl.dataset.transit);
+      console.log("Set:", iconEl.dataset.set);
+      console.log("Generated eventId:", eventId);
+
       fetch("{% url 'toggle_event_favorite' %}", {
         method: "POST",
         headers: {
@@ -414,6 +428,7 @@ function initEventFavoriteButtons() {
           "Content-Type": "application/x-www-form-urlencoded"
         },
         body: new URLSearchParams({
+          event_id: eventId,
           body: iconEl.dataset.body,
           type: iconEl.dataset.type,
           peak: iconEl.dataset.peak,
@@ -422,8 +437,19 @@ function initEventFavoriteButtons() {
           set: iconEl.dataset.set
         })
       })
-      .then(res => res.json())
+      .then(res => {
+        console.log("Server response status:", res.status);
+        return res.json();
+      })
       .then(data => {
+        console.log("Parsed server response:", data);
+
+        if (data.redirect) {
+          console.warn("User is NOT logged in. Redirecting...");
+          window.location.href = data.redirect;
+          return;
+        }
+
         if (data.favorited) {
           iconEl.classList.add("text-warning");
           iconEl.classList.remove("text-info");
@@ -431,6 +457,9 @@ function initEventFavoriteButtons() {
           iconEl.classList.remove("text-warning");
           iconEl.classList.add("text-info");
         }
+      })
+      .catch(err => {
+        console.error("ERROR toggling favorite:", err);
       });
     });
   });
