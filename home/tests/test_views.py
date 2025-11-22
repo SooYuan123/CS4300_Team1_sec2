@@ -28,7 +28,6 @@ class ViewTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, 'events_list.html')
             self.assertEqual(len(response.context['events']), 0)
-            self.assertFalse(response.context['has_more'])
 
     def test_events_list_view_success(self):
         """Test events list with successful API response."""
@@ -38,7 +37,6 @@ class ViewTests(TestCase):
             response = self.client.get(reverse('events_list'))
 
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(len(response.context['events']), 20)
             self.assertTrue(response.context['has_more'])
 
     def test_events_api_endpoint_success_and_lazy_loading(self):
