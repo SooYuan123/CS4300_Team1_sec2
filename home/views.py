@@ -13,16 +13,14 @@ import requests
 from dotenv import load_dotenv
 from .models import Favorite, EventFavorite, UserProfile
 from .forms import UserUpdateForm, ProfileUpdateForm
+from django.views.decorators.http import require_GET
 from .utils import (
     fetch_astronomical_events,
     fetch_twilight_events,
     fetch_meteor_shower_events,
     fetch_fireball_events,
     get_celestial_bodies_with_visibility,
-    fetch_rise_set_times,
-    fetch_moon_phase,
-    fetch_solar_eclipse_data,
-)
+    fetch_rise_set_times,)
 
 load_dotenv()
 
@@ -78,69 +76,15 @@ def gallery(request):
 # Events pages / API
 # -------------------------
 def events_list(request):
-    """Render the events page with first 20 events and celestial body positions"""
-    latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
-
-    # Defaults in case downstream calls fail
-    celestial_bodies = []
-    moon_phase = None
-    solar_eclipses = []
-
-    try:
-        events_data = fetch_all_events(latitude, longitude)
-        print(f"DEBUG: Fetched {len(events_data)} total events")
-
-        initial_events = events_data[:20]
-        has_more = len(events_data) > 20
-
-        print(f"DEBUG: Initial events: {len(initial_events)}, has_more: {has_more}")
-
-        # Fetch Celestial Body Positions
-        try:
-            celestial_bodies = get_celestial_bodies_with_visibility(
-                latitude=float(latitude),
-                longitude=float(longitude)
-            )
-            print(f"DEBUG: Fetched {len(celestial_bodies)} celestial bodies")
-        except Exception as e:
-            print(f"ERROR fetching celestial bodies: {e}")
-
-        # Fetch current moon phase
-        try:
-            moon_phase = fetch_moon_phase(
-                datetime.now(timezone.utc),
-                float(latitude),
-                float(longitude)
-            )
-        except Exception as e:
-            print(f"ERROR fetching moon phase: {e}")
-
-        # Fetch upcoming solar eclipses
-        try:
-            solar_eclipses = fetch_solar_eclipse_data()
-            if isinstance(solar_eclipses, dict) and 'response' in solar_eclipses:
-                solar_eclipses = list(solar_eclipses['response'].values())[:5]  # Get next 5
-        except Exception as e:
-            print(f"ERROR fetching solar eclipses: {e}")
-
-        return render(request, "events_list.html", {
-            "events": initial_events,
-            "has_more": has_more,
-            "celestial_bodies": celestial_bodies,
-            "location": "Colorado Springs, CO",
-            "moon_phase": moon_phase,
-            "solar_eclipses": solar_eclipses,
-        })
-    except Exception as e:
-        print(f"ERROR in events_list: {e}")
-        return render(request, "events_list.html", {
-            "events": [],
-            "has_more": False,
-            "celestial_bodies": [],
-            "location": "Colorado Springs, CO",
-            "moon_phase": None,
-            "solar_eclipses": [],
-        })
+    """Render an empty page shell; fetch data async via JS."""
+    return render(request, "events_list.html", {
+        "events": [],
+        "has_more": True,   # JS will actually check with API
+        "celestial_bodies": [],
+        "location": "Colorado Springs, CO",
+        "moon_phase": None,
+        "solar_eclipses": [],
+    })
 
 
 def _earliest_peak_from_events(events):
@@ -596,3 +540,10 @@ def profile_edit(request):
     }
 
     return render(request, 'profile_edit.html', context)
+
+
+@require_GET
+def api_celestial_bodies(request):
+    latitude, longitude = 38.8339, -104.8214
+    data = get_celestial_bodies_with_visibility(latitude, longitude)
+    return JsonResponse({"bodies": data}, status=200)
