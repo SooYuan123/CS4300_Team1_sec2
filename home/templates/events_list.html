@@ -179,6 +179,17 @@
         {% for e in events %}
           <div class="col-12 col-md-6 col-lg-4">
             <div class="card bg-secondary text-light shadow-lg h-100">
+              <div class="position-absolute top-0 end-0 p-2">
+                <i class="bi bi-globe-asia-australia favorite-event-toggle"
+                   data-event-id="{{ e.body }}_{{ e.type }}_{{ e.peak }}"
+                   data-body="{{ e.body }}"
+                   data-type="{{ e.type }}"
+                   data-peak="{{ e.peak }}"
+                   data-rise="{{ e.rise }}"
+                   data-transit="{{ e.transit }}"
+                   data-set="{{ e.set }}"
+                   style="font-size: 1.5rem; cursor: pointer; color: #0dcaf0;"></i>
+              </div>              
               <div class="card-body">
                 <h5 class="card-title">{{ e.body|title }}</h5>
                 <h6 class="card-subtitle mb-2 text-warning">{{ e.type|title }}</h6>
@@ -254,8 +265,19 @@
       
       return `
         <div class="col-12 col-md-6 col-lg-4">
-          <div class="card bg-secondary text-light shadow-lg h-100">
+          <div class="card bg-secondary text-light shadow-lg h-100 position-relative">
             <div class="card-body">
+              <div class="position-absolute top-0 end-0 p-2">
+                <i class="bi bi-globe-asia-australia favorite-event-toggle"
+                  data-event-id="${event.body}_${event.type}_${event.peak}"
+                  data-body="${event.body}"
+                  data-type="${event.type}"
+                  data-peak="${event.peak || ''}"
+                  data-rise="${event.rise || ''}"
+                  data-transit="${event.transit || ''}"
+                  data-set="${event.set || ''}"
+                  style="font-size: 1.5rem; cursor: pointer; color: #0dcaf0;"></i>
+              </div>
               <h5 class="card-title">${event.body.charAt(0).toUpperCase() + event.body.slice(1)}</h5>
               <h6 class="card-subtitle mb-2 text-warning">${event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'Rise-Set'}</h6>
               <ul class="list-unstyled mt-3 mb-4">
@@ -315,6 +337,10 @@
             data.events.forEach(event => {
               container.insertAdjacentHTML('beforeend', createEventCard(event));
             });
+
+            // Attach favorite listeners to new items
+            initEventFavoriteButtons();
+
             currentOffset += data.events.length;
             hasMore = data.has_more;
             
@@ -374,6 +400,74 @@
         loadMoreEvents();
       }
     });
+  </script>
+  <script>
+function initEventFavoriteButtons() {
+  document.querySelectorAll(".favorite-event-toggle").forEach(icon => {
+    icon.addEventListener("click", function (e) {
+      e.stopPropagation();
+
+      const iconEl = this;
+
+      // Generate eventID 
+      const eventId = `${iconEl.dataset.body}_${iconEl.dataset.type}_${iconEl.dataset.peak}`;
+
+      console.log("=== EVENT FAVORITE TOGGLE ===");
+      console.log("Body:", iconEl.dataset.body);
+      console.log("Type:", iconEl.dataset.type);
+      console.log("Peak:", iconEl.dataset.peak);
+      console.log("Rise:", iconEl.dataset.rise);
+      console.log("Transit:", iconEl.dataset.transit);
+      console.log("Set:", iconEl.dataset.set);
+      console.log("Generated eventId:", eventId);
+
+      fetch("{% url 'toggle_event_favorite' %}", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": "{{ csrf_token }}",
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams({
+          event_id: eventId,
+          body: iconEl.dataset.body,
+          type: iconEl.dataset.type,
+          peak: iconEl.dataset.peak,
+          rise: iconEl.dataset.rise,
+          transit: iconEl.dataset.transit,
+          set: iconEl.dataset.set
+        })
+      })
+      .then(res => {
+        console.log("Server response status:", res.status);
+        return res.json();
+      })
+      .then(data => {
+        console.log("Parsed server response:", data);
+
+        if (data.redirect) {
+          console.warn("User is NOT logged in. Redirecting...");
+          window.location.href = data.redirect;
+          return;
+        }
+
+        if (data.favorited) {
+          iconEl.classList.add("text-warning");
+          iconEl.classList.remove("text-info");
+        } else {
+          iconEl.classList.remove("text-warning");
+          iconEl.classList.add("text-info");
+        }
+      })
+      .catch(err => {
+        console.error("ERROR toggling favorite:", err);
+      });
+    });
+  });
+}
+
+// Init for initial page load
+document.addEventListener("DOMContentLoaded", initEventFavoriteButtons);
+
   </script>
 </body>
 </html>
