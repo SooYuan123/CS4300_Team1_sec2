@@ -366,7 +366,7 @@
 
 <!-- Floating chatbot button -->
 <div class="chatbot-float-button" id="chatbotFloatBtn" title="Chat with Celestia AI">
-    <i class="fas fa-meteor"></i>
+    <i class="fas fa-star"></i>
 </div>
 
 <!-- Chatbot widget -->
@@ -374,7 +374,7 @@
     <!-- Header -->
     <div class="chatbot-widget-header">
         <div class="chatbot-widget-title">
-            <i class="fas fa-meteor"></i>
+            <i class="fas fa-star"></i>
             <h3>Celestia Track AI</h3>
         </div>
         <button class="chatbot-close-btn" id="chatbotCloseBtn">
@@ -387,7 +387,7 @@
         <!-- Welcome message -->
         <div class="widget-message bot">
             <div class="widget-message-avatar">
-                <i class="fas fa-meteor"></i>
+                <i class="fas fa-star"></i>
             </div>
             <div class="widget-message-content">
                 Hello! I'm Celestia, your astronomy assistant. Ask me anything about space, planets, stars, and celestial events!
@@ -437,12 +437,24 @@
             widget.classList.remove('active');
         });
 
+        // Close widget when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!widget.contains(e.target) && !floatBtn.contains(e.target)) {
+                widget.classList.remove('active');
+            }
+        });
+
+        // Prevent clicks inside widget from closing it
+        widget.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
         // Create typing indicator
         const typingIndicator = document.createElement('div');
         typingIndicator.className = 'widget-message bot';
         typingIndicator.innerHTML = `
             <div class="widget-message-avatar">
-                <i class="fas fa-meteor"></i>
+                <i class="fas fa-star"></i>
             </div>
             <div class="widget-typing-indicator">
                 <div class="widget-typing-dot"></div>
@@ -553,7 +565,7 @@
 
             const avatar = sender === 'user'
                 ? '<i class="fas fa-user"></i>'
-                : '<i class="fas fa-meteor"></i>';
+                : '<i class="fas fa-star"></i>';
 
             messageDiv.innerHTML = `
                 <div class="widget-message-avatar">

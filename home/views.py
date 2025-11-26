@@ -535,10 +535,10 @@ def chatbot_api(request):
 
         # Call OpenAI API
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  # Using gpt-4o-mini for cost efficiency
+            model="gpt-5-mini",
             messages=messages,
-            max_tokens=500,  # Limit response length
-            temperature=0.7,  # Balance creativity and consistency
+            max_completion_tokens=800,  # Limit response length
+            temperature=1,  # Balance creativity and consistency
         )
 
         # Extract AI response

@@ -193,9 +193,9 @@ class ChatbotAPITests(TestCase):
 
         # Verify OpenAI was called with correct parameters
         call_args = mock_client.chat.completions.create.call_args
-        self.assertEqual(call_args.kwargs['model'], 'gpt-4o-mini')
-        self.assertEqual(call_args.kwargs['max_tokens'], 500)
-        self.assertEqual(call_args.kwargs['temperature'], 0.7)
+        self.assertEqual(call_args.kwargs['model'], 'gpt-5-mini')
+        self.assertEqual(call_args.kwargs['max_completion_tokens'], 800)
+        self.assertEqual(call_args.kwargs['temperature'], 1)
 
         # Verify system message is present
         messages = call_args.kwargs['messages']
