@@ -32,6 +32,7 @@ urlpatterns = [
     path('gallery/', gallery, name='gallery'),
     path('toggle-favorite/', toggle_favorite, name='toggle_favorite'),
     path('favorites/', favorites, name='favorites'),
+    path('api/chatbot/', views.chatbot_api, name='chatbot_api'),
     path('admin/', admin.site.urls),
     # Profile URLs
     path('profile/edit/', views.profile_edit, name='profile_edit'),

@@ -10,6 +10,8 @@ from django import forms
 from datetime import date, datetime, timezone, timedelta
 import os
 import requests
+import json
+from openai import OpenAI
 from dotenv import load_dotenv
 from .models import Favorite, UserProfile
 from .forms import UserUpdateForm, ProfileUpdateForm
@@ -29,6 +31,7 @@ load_dotenv()
 # Optional API keys for index/gallery helpers
 NASA_API_KEY = os.getenv("NASA_API_KEY")
 JWST_API_KEY = os.getenv("JWST_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 # -------------------------
@@ -483,6 +486,76 @@ def toggle_favorite(request):
     else:
         return JsonResponse({'favorited': True})
 
+
+def chatbot_api(request):
+    """
+    Handle chatbot API requests.
+    Receives user messages and returns AI responses about astronomy.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST requests allowed"}, status=405)
+
+    try:
+        # Parse incoming JSON data
+        data = json.loads(request.body)
+        user_message = data.get("message", "").strip()
+
+        if not user_message:
+            return JsonResponse({"error": "Message cannot be empty"}, status=400)
+
+        # Check if API key is configured
+        if not OPENAI_API_KEY:
+            return JsonResponse({
+                "error": "OpenAI API key not configured. Please contact the administrator."
+            }, status=500)
+
+        # Initialize OpenAI client
+        client = OpenAI(api_key=OPENAI_API_KEY)
+
+        # Create a system message to set the AI's behavior
+        system_message = """You are an expert astronomy assistant for CelestiaTrack, 
+        a celestial event tracking application. You help users understand astronomy concepts, 
+        celestial events, space phenomena, and answer questions about planets, stars, galaxies, 
+        and the universe. Be informative, engaging, and educational. Keep responses concise 
+        but thorough (2-4 paragraphs maximum unless asked for more detail). Use scientific 
+        accuracy while remaining accessible to general audiences."""
+
+        # Get conversation history from request (optional, for context)
+        conversation_history = data.get("history", [])
+
+        # Build messages array for API
+        messages = [{"role": "system", "content": system_message}]
+
+        # Add conversation history if provided (limit to last 10 messages for context)
+        if conversation_history:
+            messages.extend(conversation_history[-10:])
+
+        # Add current user message
+        messages.append({"role": "user", "content": user_message})
+
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Using gpt-4o-mini for cost efficiency
+            messages=messages,
+            max_tokens=500,  # Limit response length
+            temperature=0.7,  # Balance creativity and consistency
+        )
+
+        # Extract AI response
+        ai_message = response.choices[0].message.content
+
+        return JsonResponse({
+            "response": ai_message,
+            "success": True
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    except Exception as e:
+        print(f"Chatbot API Error: {e}")
+        return JsonResponse({
+            "error": f"An error occurred: {str(e)}"
+        }, status=500)
 
 @login_required
 def favorites(request):
