@@ -17,15 +17,20 @@ ASTRONOMY_API_APP_ID=your_app_id_here
 ASTRONOMY_API_APP_SECRET=your_app_secret_here 
 NASA_API_KEY=your_key_here
 RADIANT_DRIFT_API_KEY=your_radiant_drift_key_here
-You can obtain your credentials by registering at [astronomyapi.com](astronomyapi.com) or [api.nasa.gov](https://api.nasa.gov/#:~:text=Browse%20APIs-,Generate%20API%20Key,-Required%20fields%20are)
+   ```bash
+   ASTRONOMY_API_APP_ID=your_app_id_here  
+   ASTRONOMY_API_APP_SECRET=your_app_secret_here  
+   NASA_API_KEY=your_key_here  
+   JWST_API_KEY=your_key_here  
+   SSOD_APP_ID=solar_system_app_id_here  
 
-5. Run migrations
+6. Run migrations
    ```bash
    python manage.py migrate
-6. Start server
+7. Start server
    ```bash
    python manage.py runserver 0.0.0.0:3000
 - Open browser at http://127.0.0.1:3000/
 
 ## Run it on the web
-https://cs4300-team1-celestiatrack.onrender.com/
+https://celestiatrack.xyz/

@@ -19,3 +19,12 @@ DEBUG = True
 # Disable security features that interfere with CI/test runners
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = []
+
+# Force simple static storage for CI so templates can load 'styles.css' without collectstatic
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
+# If you want to be extra explicit, also disable any “manifest” toggles used by base settings
+USE_MANIFEST_STATIC = False

@@ -14,12 +14,29 @@
         <li class="nav-item"><a href="/gallery/" class="nav-link">Gallery</a></li>
         {% if user.is_authenticated %}
           <li class="nav-item">
-            <form method="post" action="{% url 'logout' %}" style="display: inline;">
-              {% csrf_token %}
-              <button type="submit" class="nav-link" style="background: none; border: none; cursor: pointer; padding: 0.5rem 1rem;">
-                Logout ({{ user.username }})
-              </button>
-            </form>
+            <a class="nav-link" href="{% url 'favorites' %}">Favorites</a>
+          </li>
+          <!-- User Dropdown Menu -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-user"></i> {{ user.username }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end bg-dark border-info" aria-labelledby="userDropdown">
+              <li>
+                <a class="dropdown-item text-light" href="{% url 'profile' username=user.username %}">
+                  <i class="fas fa-user"></i> Profile
+                </a>
+              </li>
+              <li><hr class="dropdown-divider border-info"></li>
+              <li>
+                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="dropdown-item text-light" style="background: none; border: none; cursor: pointer; width: 100%; text-align: left;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                  </button>
+                </form>
+              </li>
+            </ul>
           </li>
         {% else %}
           <li class="nav-item"><a href="{% url 'login' %}" class="nav-link">Login</a></li>
@@ -28,3 +45,22 @@
     </div>
   </div>
 </nav>
+
+<style>
+  /* Style dropdown menu to match space theme */
+  .dropdown-menu {
+    background-color: rgba(0, 0, 0, 0.9) !important;
+    backdrop-filter: blur(10px);
+  }
+
+  .dropdown-item {
+    transition: all 0.3s ease;
+  }
+
+  .dropdown-item:hover {
+    background-color: rgba(0, 212, 255, 0.2) !important;
+    color: #00eaff !important;
+    text-shadow: 0 0 8px #00eaff;
+  }
+</style>
+{% include 'chatbot_widget.html' %}

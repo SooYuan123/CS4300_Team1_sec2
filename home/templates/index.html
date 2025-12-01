@@ -9,12 +9,18 @@
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'styles.css' %}">
   
+  <!-- Swiper CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
 </head>
 
 {% include 'header.html' %}
@@ -53,41 +59,59 @@
   </section>
   
   <section class="apod-section text-center my-5 hero">
-    {% if apod %}
-      <h2>{{ apod.title }}</h2>
-      <p>{{ apod.date }}</p>
-      {% if apod.media_type == "image" %}
-        <img src="{{ apod.url }}" alt="{{ apod.title }}" class="img-fluid rounded shadow-lg">
-      {% elif apod.media_type == "video" %}
-        <div class="ratio ratio-16x9">
-          <iframe src="{{ apod.url }}" title="{{ apod.title }}" allowfullscreen></iframe>
-        </div>
-      {% endif %}
-      <p class="mt-2">{{ apod.explanation }}</p>
-    {% else %}
-      <p>Could not load NASA’s Astronomy Picture of the Day at this time. Please try again later.</p>
-    {% endif %}
-  </section>
-  
-  
-  <section class="carousel-section bg-transparent py-3 border-bottom">
-    <!-- Space Image Carousel -->
-    <div id="spaceCarousel" class="carousel slide" data-bs-ride="carousel">
-      <div class="carousel-inner rounded shadow-lg" id="carousel-inner">
-        <!-- Fallback images inserted dynamically -->
-      </div>
+      {% if space_image %}
+        {% if using_jwst %}
+          <!-- JWST Image Display -->
+          <h2>Picture of The Day</h2>
 
-      <!-- Controls -->
-      <button class="carousel-control-prev" type="button" data-bs-target="#spaceCarousel" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon"></span>
-        <span class="visually-hidden">Previous</span>
-      </button>
-      <button class="carousel-control-next" type="button" data-bs-target="#spaceCarousel" data-bs-slide="next">
-        <span class="carousel-control-next-icon"></span>
-        <span class="visually-hidden">Next</span>
-      </button>
+          {% if space_image.location %}
+            <img src="{{ space_image.location }}"
+                 alt="JWST Image"
+                 class="img-fluid rounded shadow-lg"
+                 style="max-height: 600px; object-fit: contain; border: none">
+          {% endif %}
+
+          <div class="mt-3">
+            {% if space_image.details.description %}
+              <p class="mt-2"><strong>Description:</strong> {{ space_image.details.description }}</p>
+            {% endif %}
+          </div>
+        {% else %}
+          <!-- NASA APOD Display (Original) -->
+          <h2>{{ space_image.title }}</h2>
+          <p>{{ space_image.date }}</p>
+          {% if space_image.media_type == "image" %}
+            <img src="{{ space_image.url }}" alt="{{ space_image.title }}" class="img-fluid rounded shadow-lg">
+          {% elif space_image.media_type == "video" or space_image.media_type == "other" %}
+            <div class="ratio ratio-16x9">
+              <iframe src="{{ space_image.url }}" title="{{ space_image.title }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+          {% endif %}
+          <p class="mt-2">{{ space_image.explanation }}</p>
+        {% endif %}
+      {% else %}
+        <p>Could not load space image at this time. Please try again later.</p>
+      {% endif %}
+  </section>
+
+  <section id="featured-gallery" class="hero">
+    <div class="gallery-container">
+      <div class="swiper mySwiper rounded shadow-lg">
+        <div class="swiper-wrapper" id="swiper-wrapper">
+          <!-- Images inserted dynamically -->
+        </div>
+  
+        <!-- Glow backdrop -->
+        <div id="swiper-glow" class="position-absolute w-100 h-100 top-0 start-0 z-n1 rounded"></div>
+  
+        <!-- Swiper Controls -->
+        <div class="swiper-button-next"></div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-pagination"></div>
+      </div>
     </div>
   </section>
+  
 
   <!-- Footer -->
   <footer>
@@ -97,61 +121,6 @@
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   
-
-  <script>
-    document.addEventListener("DOMContentLoaded", async function() {
-    const carouselInner = document.getElementById("carousel-inner");
-    const carouselElement = document.getElementById("spaceCarousel");
-
-    const fallbackImages = [
-      "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1706562018171-7fefa57d37af?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1706211306896-92c4abb298d7?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1707058665549-c2a27e3fad45?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80"
-    ];
-
-    try {
-      const nasaURL = "https://images-api.nasa.gov/search?q=space&media_type=image";
-      const response = await fetch(nasaURL, { cache: "no-store", signal: AbortSignal.timeout(4000) });
-      if (!response.ok) throw new Error("NASA API unreachable");
-
-      const data = await response.json();
-      const items = data.collection.items.sort(() => 0.5 - Math.random()).slice(0, 5);
-
-      items.forEach((item, index) => {
-        const imgSrc = item.links && item.links[0] ? item.links[0].href : null;
-        if (imgSrc) {
-          carouselInner.insertAdjacentHTML(
-            "beforeend",
-            `<div class="carousel-item ${index === 0 ? "active" : ""}">
-              <img src="${imgSrc}" class="d-block w-100 carousel-img" alt="NASA Space Image">
-            </div>`
-          );
-        }
-      });
-
-      if (!carouselInner.children.length) throw new Error("No valid NASA images found");
-
-    } catch (error) {
-      console.warn("Using fallback images:", error.message);
-      fallbackImages.forEach((img, index) => {
-        carouselInner.insertAdjacentHTML(
-          "beforeend",
-          `<div class="carousel-item ${index === 0 ? "active" : ""}">
-            <img src="${img}" class="d-block w-100 carousel-img img-fluid" alt="Space Image Fallback">
-          </div>`
-        );
-      });
-    }
-
-    // Wait a tick to ensure images render, then init carousel
-    setTimeout(() => {
-      new bootstrap.Carousel(carouselElement, { interval: 5000, ride: "carousel" });
-    }, 200);
-  });
-
-  </script>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -179,6 +148,93 @@
     });
   });
   </script>
-  
+
+  <!-- Swiper JS -->
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+  <script>
+  document.addEventListener("DOMContentLoaded", async function() {
+    const swiperWrapper = document.getElementById("swiper-wrapper");
+    const glow = document.getElementById("swiper-glow");
+
+    const fallbackImages = [
+      "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1706562018171-7fefa57d37af?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1706211306896-92c4abb298d7?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1707058665549-c2a27e3fad45?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80"
+    ];
+
+    try {
+      const nasaURL = "https://images-api.nasa.gov/search?q=space&media_type=image";
+      const response = await fetch(nasaURL, { cache: "no-store", signal: AbortSignal.timeout(4000) });
+      if (!response.ok) throw new Error("NASA API unreachable");
+
+      const data = await response.json();
+      const items = data.collection.items.sort(() => 0.5 - Math.random()).slice(0, 5);
+
+      items.forEach(item => {
+        const imgSrc = item.links && item.links[0] ? item.links[0].href : null;
+        if (imgSrc) {
+          swiperWrapper.insertAdjacentHTML("beforeend", `
+            <div class="swiper-slide">
+              <img src="${imgSrc}" alt="Space Image" class="img-fluid rounded">
+            </div>`);
+        }
+      });
+
+      if (!swiperWrapper.children.length) throw new Error("No valid NASA images found");
+    } catch (error) {
+      console.warn("Using fallback images:", error.message);
+      fallbackImages.forEach(img => {
+        swiperWrapper.insertAdjacentHTML("beforeend", `
+          <div class="swiper-slide">
+            <img src="${img}" alt="Fallback Space Image" class="img-fluid rounded">
+          </div>`);
+      });
+    }
+
+    // Initialize Swiper
+    const swiper = new Swiper(".mySwiper", {
+      loop: true,
+      autoplay: { delay: 5000 },
+      pagination: { el: ".swiper-pagination", clickable: true },
+      navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
+      effect: "fade",
+      fadeEffect: { crossFade: true },
+    });
+
+    // Dominant color glow generator
+    function getAverageColor(imgEl) {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = imgEl.naturalWidth;
+      canvas.height = imgEl.naturalHeight;
+      ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let r = 0, g = 0, b = 0, count = 0;
+      for (let i = 0; i < data.length; i += 4 * 1000) { // sample pixels sparsely
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count++;
+      }
+      return `rgb(${Math.floor(r / count)}, ${Math.floor(g / count)}, ${Math.floor(b / count)})`;
+    }
+
+    function updateGlow() {
+      const activeSlide = document.querySelector(".swiper-slide-active img");
+      if (activeSlide && activeSlide.complete) {
+        const color = getAverageColor(activeSlide);
+        glow.style.backgroundColor = color;
+      }
+    }
+
+    swiper.on("slideChangeTransitionEnd", updateGlow);
+    setTimeout(updateGlow, 1000);
+  });
+  </script>
+
 </body>
 </html>
