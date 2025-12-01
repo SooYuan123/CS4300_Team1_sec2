@@ -7,7 +7,7 @@ from .utils import (
     fetch_astronomical_events, 
     get_celestial_bodies_with_visibility,
     fetch_rise_set_times,
-    fetch_moon_phase,
+    # fetch_moon_phase,  # Temporarily disabled per Radiant Drift moon position issues
     fetch_solar_eclipse_data
 )
 from datetime import date, datetime, timezone, timedelta
@@ -92,16 +92,16 @@ def events_list(request):
         except Exception as e:
             print(f"ERROR fetching celestial bodies: {e}")
 
-        # Fetch current moon phase
+        # Fetch current moon phase (temporarily disabled to avoid moon position calls)
         moon_phase = None
-        try:
-            moon_phase = fetch_moon_phase(
-                datetime.now(timezone.utc),
-                float(latitude),
-                float(longitude)
-            )
-        except Exception as e:
-            print(f"ERROR fetching moon phase: {e}")
+        # try:
+        #     moon_phase = fetch_moon_phase(
+        #         datetime.now(timezone.utc),
+        #         float(latitude),
+        #         float(longitude)
+        #     )
+        # except Exception as e:
+        #     print(f"ERROR fetching moon phase: {e}")
 
         # Fetch upcoming solar eclipses
         solar_eclipses = []

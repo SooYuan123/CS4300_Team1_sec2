@@ -16,9 +16,17 @@ SOLAR_SYSTEM_API_BASE = "https://api.le-systeme-solaire.net/rest/bodies"
 def get_radiant_drift_auth_header():
     """Get authorization header for Radiant Drift API"""
     api_key = getattr(settings, "RADIANT_DRIFT_API_KEY", None) or os.getenv("RADIANT_DRIFT_API_KEY")
+    account_id = getattr(settings, "RADIANT_DRIFT_ACCOUNT_ID", None) or os.getenv("RADIANT_DRIFT_ACCOUNT_ID")
+    
     if not api_key:
         raise ValueError("RADIANT_DRIFT_API_KEY not configured")
-    return {"Authorization": f"RadiantDriftAuth {api_key}"}
+    if not account_id:
+        raise ValueError("RADIANT_DRIFT_ACCOUNT_ID not configured")
+    
+    return {
+        "Authorization": f"RadiantDriftAuth {api_key}",
+        "X-Radiant-Drift-Account-Id": account_id
+    }
 
 
 def get_solar_system_auth_header():
