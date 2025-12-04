@@ -40,6 +40,9 @@ urlpatterns = [
 
     path('api/events/', events_api, name='events_api'),
     path("api/celestial/", api_celestial_bodies),
+    path("api/celestial-bodies/", views.api_celestial_bodies, name="celestial_bodies"),
+    path("api/search-city/", views.api_search_city, name="api_search_city"),
+
 
     path('gallery/', gallery, name='gallery'),
     path('toggle-favorite/', toggle_favorite, name='toggle_favorite'),

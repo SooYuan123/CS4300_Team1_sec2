@@ -233,3 +233,28 @@
 .apod-section iframe {
   border: 2px solid rgba(0, 212, 255, 0.3);
 }
+
+.space-input {
+  background: rgba(10, 10, 25, 0.7);
+  border: 1px solid #6d4dfc;
+  color: #d6c8ff;
+  box-shadow: 0 0 10px rgba(120, 60, 255, 0.5);
+  font-family: 'Orbitron', sans-serif;
+}
+
+.space-input:focus {
+  outline: none;
+  border-color: #a47bff;
+  box-shadow: 0 0 15px rgba(150, 100, 255, 0.8);
+}
+
+#search-results .list-group-item {
+  background: rgba(20, 20, 40, 0.9);
+  color: #e0d7ff;
+  border: 1px solid #4a2f9b;
+}
+
+#search-results .list-group-item:hover {
+  background: rgba(50, 50, 90, 0.9);
+  cursor: pointer;
+}

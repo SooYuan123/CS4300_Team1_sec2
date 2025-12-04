@@ -111,7 +111,9 @@ def events_api(request):
     try:
         offset = int(request.GET.get("offset", 0))
         limit = int(request.GET.get("limit", 20))
-        latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
+
+        latitude = request.GET.get("lat", "38.8339")
+        longitude = request.GET.get("lon", "-104.8214")
 
         all_events = fetch_all_events(latitude, longitude)
         total = len(all_events)
@@ -129,10 +131,6 @@ def events_api(request):
     except Exception as e:
         return JsonResponse({
             "events": [],
-            "total": 0,
-            "offset": 0,
-            "limit": 0,
-            "has_more": False,
             "error": True,
             "message": str(e),
         }, status=500)
@@ -544,6 +542,42 @@ def profile_edit(request):
 
 @require_GET
 def api_celestial_bodies(request):
-    latitude, longitude = 38.8339, -104.8214
+    latitude = request.GET.get("lat", 38.8339)
+    longitude = request.GET.get("lon", -104.8214)
+    
     data = get_celestial_bodies_with_visibility(latitude, longitude)
     return JsonResponse({"bodies": data}, status=200)
+
+
+@require_GET
+def api_search_city(request):
+    """Search city names via Nominatim."""
+    query = request.GET.get("q", "")
+    if len(query) < 2:
+        return JsonResponse({"results": []})
+
+    try:
+        resp = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "q": query,
+                "format": "json",
+                "limit": 5,
+                "addressdetails": 1,
+            },
+            headers={"User-Agent": "astral-app/1.0"}
+        )
+        data = resp.json()
+
+        results = [
+            {
+                "name": item.get("display_name"),
+                "lat": item.get("lat"),
+                "lon": item.get("lon")
+            }
+            for item in data
+        ]
+        return JsonResponse({"results": results})
+
+    except Exception as e:
+        return JsonResponse({"results": [], "error": str(e)}, status=500)
