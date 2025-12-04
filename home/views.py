@@ -10,6 +10,8 @@ from django import forms
 from datetime import date, datetime, timezone, timedelta
 import os
 import requests
+import json
+from openai import OpenAI
 from dotenv import load_dotenv
 from .models import Favorite, EventFavorite, UserProfile
 from .forms import UserUpdateForm, ProfileUpdateForm
@@ -27,6 +29,7 @@ load_dotenv()
 # Optional API keys for index/gallery helpers
 NASA_API_KEY = os.getenv("NASA_API_KEY")
 JWST_API_KEY = os.getenv("JWST_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 # -------------------------
@@ -472,6 +475,122 @@ def toggle_event_favorite(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+
+def toggle_event_favorite(request):
+    try:
+        print("RAW POST:", request.POST)
+
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {'redirect': '/login/', 'message': 'Please login to add favorites.'},
+                status=401
+            )
+
+        event_id = request.POST.get("event_id")
+        print("EVENT ID RECEIVED:", event_id)
+
+        if not event_id:
+            return JsonResponse({"error": "Missing event_id"}, status=400)
+
+        fav = EventFavorite.objects.filter(user=request.user, event_id=event_id).first()
+        print("FOUND FAVORITE:", fav)
+
+        if fav:
+            fav.delete()
+            print("Deleted favorite.")
+            return JsonResponse({"favorited": False})
+
+        print("Creating new favorite…")
+        created_fav = EventFavorite.objects.create(
+            user=request.user,
+            event_id=event_id,
+            body=request.POST.get("body", ""),
+            type=request.POST.get("type", ""),
+            peak=request.POST.get("peak", ""),
+            rise=request.POST.get("rise", ""),
+            transit=request.POST.get("transit", ""),
+            set=request.POST.get("set", ""),
+        )
+        print("Created:", created_fav)
+
+        return JsonResponse({"favorited": True})
+
+    except Exception as e:
+        import traceback
+        print("ERROR IN toggle_event_favorite:")
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+def chatbot_api(request):
+    """
+    Handle chatbot API requests.
+    Receives user messages and returns AI responses about astronomy.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST requests allowed"}, status=405)
+
+    try:
+        # Parse incoming JSON data
+        data = json.loads(request.body)
+        user_message = data.get("message", "").strip()
+
+        if not user_message:
+            return JsonResponse({"error": "Message cannot be empty"}, status=400)
+
+        # Check if API key is configured
+        if not OPENAI_API_KEY:
+            return JsonResponse({
+                "error": "OpenAI API key not configured. Please contact the administrator."
+            }, status=500)
+
+        # Initialize OpenAI client
+        client = OpenAI(api_key=OPENAI_API_KEY)
+
+        # Create a system message to set the AI's behavior
+        system_message = """You are an expert astronomy assistant for CelestiaTrack, 
+        a celestial event tracking application. You help users understand astronomy concepts, 
+        celestial events, space phenomena, and answer questions about planets, stars, galaxies, 
+        and the universe. Be informative, engaging, and educational. Keep responses concise 
+        but thorough (2-4 paragraphs maximum unless asked for more detail). Use scientific 
+        accuracy while remaining accessible to general audiences."""
+
+        # Get conversation history from request (optional, for context)
+        conversation_history = data.get("history", [])
+
+        # Build messages array for API
+        messages = [{"role": "system", "content": system_message}]
+
+        # Add conversation history if provided (limit to last 10 messages for context)
+        if conversation_history:
+            messages.extend(conversation_history[-10:])
+
+        # Add current user message
+        messages.append({"role": "user", "content": user_message})
+
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-5-mini",
+            messages=messages,
+            max_completion_tokens=800,  # Limit response length
+            temperature=1,  # Balance creativity and consistency
+        )
+
+        # Extract AI response
+        ai_message = response.choices[0].message.content
+
+        return JsonResponse({
+            "response": ai_message,
+            "success": True
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    except Exception as e:
+        print(f"Chatbot API Error: {e}")
+        return JsonResponse({
+            "error": f"An error occurred: {str(e)}"
+        }, status=500)
 
 @login_required
 def favorites(request):
