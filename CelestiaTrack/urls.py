@@ -54,6 +54,7 @@ urlpatterns = [
     path('profile/edit/', views.profile_edit, name='profile_edit'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
+    path('api/upload-profile-picture/', views.upload_profile_picture, name='upload_profile_picture'),
 ]
 
 # Serve media files in development

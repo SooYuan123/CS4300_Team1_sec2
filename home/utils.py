@@ -13,7 +13,6 @@ load_dotenv()
 # -------------------------
 ASTRONOMY_API_BASE = "https://api.astronomyapi.com/api/v2/bodies/events"
 OPEN_METEO_API_BASE = "https://api.open-meteo.com/v1/forecast"
-AMS_METEORS_API_BASE = "https://www.amsmeteors.org/members/api/open_api"
 
 # Radiant Drift API
 RADIANT_DRIFT_API_BASE = "https://api.radiantdrift.com"
@@ -360,97 +359,6 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
     except Exception as e:
         print(f"Error fetching twilight events: {e}")
         return []
-
-# -------------------------
-# AMS Meteors – showers + fireballs (optional)
-# -------------------------
-def fetch_meteor_shower_events(from_date=None, to_date=None, api_key=None):
-    """AMS meteors (optional): returns list; [] if no key or error."""
-    if not api_key:
-        print("AMS Meteors API key not provided, skipping meteor shower data")
-        return []
-    try:
-        today = datetime.now(timezone.utc).date()
-        to_date = to_date or (today + timedelta(days=1095))
-        from_date = from_date or (today - timedelta(days=365))
-
-        params = {
-            "api_key": api_key,
-            "start_date": str(from_date),
-            "end_date": str(to_date),
-        }
-        r = requests.get(f"{AMS_METEORS_API_BASE}/get_events", params=params, timeout=15)
-        r.raise_for_status()
-        data = r.json() or {}
-
-        events = []
-        if data.get("status") == 200:
-            for ev in data.get("result", []) or []:
-                events.append({
-                    "body": "Meteor Shower",
-                    "type": ev.get("name", "Meteor Shower"),
-                    "peak": ev.get("peak_date"),
-                    "rise": None,
-                    "set": None,
-                    "obscuration": None,
-                    "highlights": {
-                        "source": "ams_meteors",
-                        "category": "meteor_shower",
-                        "description": ev.get("description", ""),
-                        "meteor_count": ev.get("meteor_count", "Unknown"),
-                        "visibility": ev.get("visibility", "Unknown"),
-                    },
-                })
-        return events
-    except Exception as e:
-        print(f"Error fetching meteor shower events: {e}")
-        return []
-
-
-def fetch_fireball_events(from_date=None, to_date=None, api_key=None, latitude=None, longitude=None):
-    """AMS fireballs (optional): returns list; [] if no key or error."""
-    if not api_key:
-        print("AMS Meteors API key not provided, skipping fireball data")
-        return []
-    try:
-        today = datetime.now(timezone.utc).date()
-        to_date = to_date or (today + timedelta(days=1095))
-        from_date = from_date or (today - timedelta(days=365))
-
-        params = {
-            "api_key": api_key,
-            "start_date": str(from_date),
-            "end_date": str(to_date),
-            "pending_only": 0,
-        }
-        r = requests.get(f"{AMS_METEORS_API_BASE}/get_close_reports", params=params, timeout=15)
-        r.raise_for_status()
-        data = r.json() or {}
-
-        events = []
-        if data.get("status") == 200:
-            for rep in data.get("result", []) or []:
-                events.append({
-                    "body": "Fireball",
-                    "type": "Fireball Sighting",
-                    "peak": rep.get("date"),
-                    "rise": None,
-                    "set": None,
-                    "obscuration": None,
-                    "highlights": {
-                        "source": "ams_meteors",
-                        "category": "fireball",
-                        "description": "Fireball sighting reported",
-                        "location": f"{rep.get('city', 'Unknown')}, {rep.get('state', 'Unknown')}",
-                        "brightness": rep.get("brightness", "Unknown"),
-                        "trajectory": rep.get("trajectory", "Unknown"),
-                    },
-                })
-        return events
-    except Exception as e:
-        print(f"Error fetching fireball events: {e}")
-        return []
-
 
 # -------------------------
 # Solar System OpenData + visibility helpers
