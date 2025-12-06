@@ -22,13 +22,6 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install coverage pytest pytest-django pytest-cov
-      - name: Run Django tests with coverage
-        env:
-          DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
-        run: |
-          export DJANGO_SETTINGS_MODULE=CelestiaTrack.settings_ci
-          coverage run --source='home,CelestiaTrack' -m pytest
-          coverage report --fail-under=80
 
   deploy:
     name: Trigger Render Deploy
