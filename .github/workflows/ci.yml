@@ -46,7 +46,8 @@ jobs:
         run: |
           # Measure coverage for application code only (excludes migrations, venv, etc.)
           # Add more apps here as your project grows: --source='home,CelestiaTrack,newapp'
-          export DJANGO_SETTINGS_MODULE=CelestiaTrack.settings_ci coverage run --source='home,CelestiaTrack' -m pytest
+          export DJANGO_SETTINGS_MODULE=CelestiaTrack.settings_ci
+          coverage run --source=home --source=CelestiaTrack -m pytest
           coverage xml
 
       - name: Check coverage threshold
