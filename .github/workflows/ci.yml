@@ -43,12 +43,12 @@ jobs:
           python manage.py migrate --settings=CelestiaTrack.settings_ci
 
       - name: Run tests with coverage
+        env:
+          DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
         run: |
-          # Measure coverage for application code only (excludes migrations, venv, etc.)
-          # Add more apps here as your project grows: --source='home,CelestiaTrack,newapp'
-          export DJANGO_SETTINGS_MODULE=CelestiaTrack.settings_ci
           coverage run --source=home --source=CelestiaTrack -m pytest
           coverage xml
+
 
       - name: Check coverage threshold
         run: |
