@@ -26,7 +26,8 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
         run: |
-          coverage run --source='.' -m pytest
+          export DJANGO_SETTINGS_MODULE=CelestiaTrack.settings_ci
+          coverage run --source='home,CelestiaTrack' -m pytest
           coverage report --fail-under=80
 
   deploy:
