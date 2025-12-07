@@ -44,11 +44,12 @@ jobs:
 
       - name: Run Tests with Pytest + Coverage
         run: |
-          pytest \
-            --cov=home \
-            --cov=CelestiaTrack \
-            --cov-report=xml \
-            --cov-report=term
+          pytest --cov=home --cov=CelestiaTrack --cov-report=xml
+
+      - name: Create text coverage summary
+        run: |
+          coverage report > coverage-report.txt
+
 
       - name: Enforce Coverage Threshold
         run: |
