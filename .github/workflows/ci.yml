@@ -36,25 +36,22 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install coverage pytest pytest-django pytest-cov
+          pip install pytest pytest-django pytest-cov coverage
 
       - name: Run migrations
         run: |
           python manage.py migrate --settings=CelestiaTrack.settings_ci
 
-      - name: Run tests with coverage
+      - name: Run Tests with Pytest + Coverage
         run: |
-          # Measure coverage for application code only (excludes migrations, venv, etc.)
-          # Add more apps here as your project grows: --source='home,CelestiaTrack,newapp'
-          coverage run --source='home,CelestiaTrack' manage.py test --settings=CelestiaTrack.settings_ci
-          coverage xml
+          pytest \
+            --cov=home \
+            --cov=CelestiaTrack \
+            --cov-report=xml \
+            --cov-report=term
 
-
-      - name: Check coverage threshold
+      - name: Enforce Coverage Threshold
         run: |
-          # Fail if coverage is below threshold to maintain code quality
-          # Default is 80%, can be configured by setting COVERAGE_THRESHOLD env var
-          coverage report | tee coverage-report.txt
           coverage report --fail-under=${COVERAGE_THRESHOLD:-80}
 
       - name: Upload coverage reports
