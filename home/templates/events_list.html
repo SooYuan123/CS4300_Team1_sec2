@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Astronomical Events</title>
 
   <!-- Bootstrap CSS -->
@@ -28,7 +29,7 @@
 
     <!-- SEARCH -->
     <div class="mb-5 text-center">
-      <div class="position-relative d-inline-block" style="width: 380px;">
+      <div class="position-relative mx-auto" style="max-width: 380px; width: 100%;">
         <input id="city-search" type="text" class="form-control space-input" placeholder="🔭 Search for a city...">
         <div id="search-results" class="list-group position-absolute w-100 shadow-lg" style="z-index: 999; display:none;"></div>
       </div>
@@ -36,9 +37,12 @@
 
     <!-- CELESTIAL BODIES -->
     <div class="mb-5">
-      <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;"><i class="bi bi-stars"></i> Celestial Body Positions</h3>
-      <p class="text-center text-muted mb-4"><i class="bi bi-geo-alt"></i> Visibility times for <span id="location-name">{{ location }}</span></p>
-
+      <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;"><i class="bi bi-stars"></i> Celestial Bodies</h3>
+      <p class="text-center mb-4" style="color: #d2af26; text-shadow: 0 0 6px #171819;">
+        <i class="bi bi-geo-alt"></i> Event Visibility Times for 
+        <span id="location-name">{{ location }}</span>
+      </p>
+      
       <div id="celestial-container" class="row g-3 text-center"></div>
       <div id="celestial-loading" class="text-center my-3" style="display:none;">
         <div class="spinner-border text-primary" role="status"></div>
@@ -50,8 +54,10 @@
 
     <!-- EVENTS -->
     <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;"><i class="bi bi-calendar-event"></i> Sun & Moon Rise/Set Times</h3>
-    <p class="text-center text-muted mb-4"><i class="bi bi-info-circle"></i> Powered by Radiant Drift API</p>
-
+    <p class="text-center mb-4" style="color: #d2af26; text-shadow: 0 0 6px #171819;">
+      <i class="bi bi-info-circle"></i> Powered by Radiant Drift API
+    </p>
+    
     <div id="events-container" class="row g-4"></div>
 
     <!-- Loading Spinner -->
