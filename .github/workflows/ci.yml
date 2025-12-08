@@ -228,17 +228,16 @@ jobs:
           pip install flake8 pylint black isort
 
       - name: Run flake8
-        continue-on-error: true
         run: |
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics > flake8-report.txt
+          flake8 . --count --max-complexity=10 --max-line-length=127 --statistics | tee flake8-report.txt
 
       - name: Run pylint
-        continue-on-error: true
         run: |
-          pylint **/*.py --exit-zero > pylint-report.txt || true
+          pylint **/*.py | tee pylint-report.txt || true
 
       - name: Upload lint reports
+        if: always()  # Upload reports even if previous steps failed
         uses: actions/upload-artifact@v4
         with:
           name: lint-reports

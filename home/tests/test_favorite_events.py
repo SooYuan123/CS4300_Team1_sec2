@@ -13,7 +13,7 @@ def test_favorite_event_requires_login(client):
 
 @pytest.mark.django_db
 def test_favorite_event_add_and_remove(client):
-    user = User.objects.create_user("y", password="pass")
+    User.objects.create_user("y", password="pass")
     client.login(username="y", password="pass")
 
     url = reverse("toggle_event_favorite")

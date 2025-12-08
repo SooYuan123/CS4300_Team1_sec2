@@ -1,12 +1,11 @@
+from datetime import datetime, timedelta, timezone
+import requests
 import os
 import base64
-import requests
 import ephem
-import math
-from datetime import datetime, timedelta, timezone
 from requests.exceptions import HTTPError, RequestException
-from django.conf import settings
 from dotenv import load_dotenv
+from django.conf import settings
 
 load_dotenv()
 
@@ -165,9 +164,12 @@ def fetch_rise_set_times(body, latitude, longitude, from_date=None, to_date=None
                     event = {
                         "date": date_key,
                         "body": {"name": body.capitalize()},
-                        "rise": {"date": body_data.get("rise", {}).get("utc")} if "rise" in body_data else None,
-                        "transit": {"date": body_data.get("transit", {}).get("utc")} if "transit" in body_data else None,
-                        "set": {"date": body_data.get("set", {}).get("utc")} if "set" in body_data else None,
+                        "rise": {"date": body_data.get("rise", {}).get("utc")}
+                        if "rise" in body_data else None,
+                        "transit": {"date": body_data.get("transit", {}).get("utc")}
+                        if "transit" in body_data else None,
+                        "set": {"date": body_data.get("set", {}).get("utc")}
+                        if "set" in body_data else None,
                         "events": [
                             {
                                 "type": "rise-set",

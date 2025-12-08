@@ -1,8 +1,7 @@
 import pytest
 import requests
 import requests_mock
-from datetime import datetime, timezone
-from django.conf import settings
+from datetime import datetime
 from home import utils
 
 

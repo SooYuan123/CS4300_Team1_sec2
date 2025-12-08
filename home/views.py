@@ -1,3 +1,7 @@
+import os
+import json
+from datetime import date, datetime, timezone, timedelta
+import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.forms import UserCreationForm
@@ -7,11 +11,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.conf import settings
 from django import forms
-from datetime import date, datetime, timezone, timedelta
-import os
-import requests
-import json
-import pytz
 from openai import OpenAI
 from dotenv import load_dotenv
 from .models import Favorite, EventFavorite, UserProfile
@@ -23,7 +22,6 @@ from .utils import (
     fetch_meteor_shower_events,
     fetch_fireball_events,
     get_celestial_bodies_with_visibility,
-    fetch_rise_set_times,
     fetch_moon_phase,
     fetch_solar_eclipse_data,
     fetch_weather_forecast,
@@ -567,54 +565,6 @@ def toggle_event_favorite(request):
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
 
-
-
-def toggle_event_favorite(request):
-    try:
-        print("RAW POST:", request.POST)
-
-        if not request.user.is_authenticated:
-            return JsonResponse(
-                {'redirect': '/login/', 'message': 'Please login to add favorites.'},
-                status=401
-            )
-
-        event_id = request.POST.get("event_id")
-        print("EVENT ID RECEIVED:", event_id)
-
-        if not event_id:
-            return JsonResponse({"error": "Missing event_id"}, status=400)
-
-        fav = EventFavorite.objects.filter(user=request.user, event_id=event_id).first()
-        print("FOUND FAVORITE:", fav)
-
-        if fav:
-            fav.delete()
-            print("Deleted favorite.")
-            return JsonResponse({"favorited": False})
-
-        print("Creating new favorite…")
-        created_fav = EventFavorite.objects.create(
-            user=request.user,
-            event_id=event_id,
-            body=request.POST.get("body", ""),
-            type=request.POST.get("type", ""),
-            peak=request.POST.get("peak", ""),
-            rise=request.POST.get("rise", ""),
-            transit=request.POST.get("transit", ""),
-            set=request.POST.get("set", ""),
-        )
-        print("Created:", created_fav)
-
-        return JsonResponse({"favorited": True})
-
-    except Exception as e:
-        import traceback
-        print("ERROR IN toggle_event_favorite:")
-        traceback.print_exc()
-        return JsonResponse({"error": str(e)}, status=500)
-
-
 def chatbot_api(request):
     """
     Handle chatbot API requests.
@@ -641,12 +591,13 @@ def chatbot_api(request):
         client = OpenAI(api_key=OPENAI_API_KEY)
 
         # Create a system message to set the AI's behavior
-        system_message = """You are an expert astronomy assistant for CelestiaTrack, 
-        a celestial event tracking application. You help users understand astronomy concepts, 
-        celestial events, space phenomena, and answer questions about planets, stars, galaxies, 
-        and the universe. Be informative, engaging, and educational. Keep responses concise 
-        but thorough (2-4 paragraphs maximum unless asked for more detail). Use scientific 
-        accuracy while remaining accessible to general audiences."""
+        system_message = (
+            "You are an expert astronomy assistant for CelestiaTrack, a celestial event tracking application. "
+            "You help users understand astronomy concepts, celestial events, space phenomena, and answer questions "
+            "about planets, stars, galaxies, and the universe. Be informative, engaging, and educational. "
+            "Keep responses concise but thorough (2-4 paragraphs maximum unless asked for more detail). "
+            "Use scientific accuracy while remaining accessible to general audiences."
+        )
 
         # Get conversation history from request (optional, for context)
         conversation_history = data.get("history", [])
@@ -761,7 +712,7 @@ def profile_view(request, username=None):
         user = request.user
 
     # Get or create profile
-    profile, created = UserProfile.objects.get_or_create(user=user)
+    profile, _ = UserProfile.objects.get_or_create(user=user)
 
     context = {
         'profile_user': user,
@@ -827,7 +778,8 @@ def api_search_city(request):
                 "limit": 5,
                 "addressdetails": 1,
             },
-            headers={"User-Agent": "astral-app/1.0"}
+            headers={"User-Agent": "astral-app/1.0"},
+            timeout=10
         )
         data = resp.json()
 

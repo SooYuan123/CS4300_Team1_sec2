@@ -1,5 +1,8 @@
-from .settings import *
-import os
+from pathlib import Path
+from .settings import *  # noqa:  F401,F403
+
+# Define BASE_DIR explicitly since star import might miss it contextually in linting
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # -----------------------------------------------------------
 # Database Configuration: Force SQLite for CI

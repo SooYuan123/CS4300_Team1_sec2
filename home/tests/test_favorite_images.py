@@ -11,7 +11,7 @@ def test_favorite_image_requires_login(client):
 
 @pytest.mark.django_db
 def test_favorite_image_add_and_remove(client):
-    user = User.objects.create_user("x", password="pass")
+    User.objects.create_user("x", password="pass")
     client.login(username="x", password="pass")
 
     url = reverse("toggle_favorite")

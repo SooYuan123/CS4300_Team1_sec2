@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-""" cache API data """
+# cache API data
 class AstronomicalEvent(models.Model):
     body_name = models.CharField(max_length=50)
     event_type = models.CharField(max_length=100)
@@ -33,7 +33,7 @@ class Favorite(models.Model):
 
 class EventFavorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    event_id = models.CharField(max_length=255, default="", blank=True) 
+    event_id = models.CharField(max_length=255, default="", blank=True)
     body = models.CharField(max_length=100)
     type = models.CharField(max_length=100)
     peak = models.CharField(max_length=100, blank=True)
@@ -44,7 +44,6 @@ class EventFavorite(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.event_id}"
-
 
 
 class UserProfile(models.Model):
@@ -62,12 +61,12 @@ class UserProfile(models.Model):
         blank=True,
         help_text="Tell us about yourself"
     )
-    #profile_picture = models.ImageField(
+    # profile_picture = models.ImageField(
     #    upload_to='profile_pics/',
     #    blank=True,
     #    null=True,
     #    help_text="Upload a profile picture"
-    #)
+    # )
     location = models.CharField(
         max_length=100,
         blank=True,
