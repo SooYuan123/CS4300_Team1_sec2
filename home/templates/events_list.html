@@ -3,6 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Astronomical Events</title>
 
   <!-- Bootstrap CSS -->
@@ -24,9 +25,7 @@
 {% include 'header.html' %}
 <body class="bg-dark text-light">
   <div class="container my-5">
-    <h2 class="text-center mb-5" style="font-family: 'Orbitron', sans-serif;">
-      Astronomical Events & Data
-    </h2>
+    <h2 class="text-center mb-5" style="font-family: 'Orbitron', sans-serif;">Astronomical Events & Data</h2>
 
     <!-- Moon Phase Section -->
     {% if moon_phase %}
@@ -86,146 +85,47 @@
           </div>
         </div>
         {% endfor %}
+    <!-- SEARCH -->
+    <div class="mb-5 text-center">
+      <div class="position-relative mx-auto" style="max-width: 380px; width: 100%;">
+        <input id="city-search" type="text" class="form-control space-input" placeholder="🔭 Search for a city...">
+        <div id="search-results" class="list-group position-absolute w-100 shadow-lg" style="z-index: 999; display:none;"></div>
       </div>
     </div>
-    <hr class="my-5 border-secondary">
-    {% endif %}
 
-    <!-- Celestial Bodies Section -->
-    {% if celestial_bodies %}
+    <!-- CELESTIAL BODIES -->
     <div class="mb-5">
-      <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;">
-        <i class="bi bi-stars"></i> Celestial Body Positions
-      </h3>
-      <p class="text-center text-muted mb-4">
-        <i class="bi bi-geo-alt"></i> Visibility times for {{ location }}
-      </p>
-      <p class="text-center text-warning mb-4">
-        <i class="bi bi-info-circle"></i> Visibility data powered by Radiant Drift API (Sun & Moon only)
+      <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;"><i class="bi bi-stars"></i> Celestial Bodies</h3>
+      <p class="text-center mb-4" style="color: #d2af26; text-shadow: 0 0 6px #171819;">
+        <i class="bi bi-geo-alt"></i> Event Visibility Times for 
+        <span id="location-name">{{ location }}</span>
       </p>
       
-      <div class="row g-3">
-        {% for body in celestial_bodies %}
-        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-          <div class="card bg-dark border-primary text-light shadow h-100">
-            <div class="card-body">
-              <h5 class="card-title text-primary">
-                <i class="bi bi-circle-fill"></i> {{ body.name }}
-              </h5>
-              
-              {% if body.nextVisibleStr %}
-              <div class="alert alert-info py-2 mb-3">
-                <small><strong>Next Visible:</strong><br>
-                {{ body.nextVisibleStr|slice:":10" }} {{ body.nextVisibleStr|slice:"11:16" }} UTC</small>
-              </div>
-              {% else %}
-              <div class="alert alert-secondary py-2 mb-3">
-                <small>
-                  {% if body.name == "Sun" or body.name == "Moon" %}
-                  Calculating visibility...
-                  {% else %}
-                  Visibility data unavailable for planets
-                  {% endif %}
-                </small>
-              </div>
-              {% endif %}
-
-              <details class="mt-2">
-                <summary class="text-warning" style="cursor: pointer;">Physical Properties</summary>
-                <ul class="list-unstyled mt-2 small">
-                  {% if body.meanRadius %}
-                  <li><strong>Radius:</strong> {{ body.meanRadius|floatformat:0 }} km</li>
-                  {% endif %}
-                  {% if body.mass.massValue %}
-                  <li><strong>Mass:</strong> {{ body.mass.massValue|floatformat:2 }} × 10^{{ body.mass.massExponent }} kg</li>
-                  {% endif %}
-                  {% if body.density %}
-                  <li><strong>Density:</strong> {{ body.density|floatformat:2 }} g/cm³</li>
-                  {% endif %}
-                  {% if body.gravity %}
-                  <li><strong>Gravity:</strong> {{ body.gravity|floatformat:2 }} m/s²</li>
-                  {% endif %}
-                  {% if body.avgTemp %}
-                  <li><strong>Avg Temp:</strong> {{ body.avgTemp|floatformat:0 }} K</li>
-                  {% endif %}
-                </ul>
-              </details>
-
-              {% if body.moons %}
-              <details class="mt-2">
-                <summary class="text-info" style="cursor: pointer;">Moons ({{ body.moons|length }})</summary>
-                <div class="mt-2 small" style="max-height: 100px; overflow-y: auto;">
-                  {% for moon in body.moons %}
-                  <span class="badge bg-secondary me-1 mb-1">{{ moon.moon }}</span>
-                  {% endfor %}
-                </div>
-              </details>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% endfor %}
+      <div id="celestial-container" class="row g-3 text-center"></div>
+      <div id="celestial-loading" class="text-center my-3" style="display:none;">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 mb-0">Loading celestial data...</p>
       </div>
     </div>
-    <hr class="my-5 border-secondary">
-    {% endif %}
 
-    <!-- Astronomical Events Section -->
-    <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;">
-      <i class="bi bi-calendar-event"></i> Sun & Moon Rise/Set Times
-    </h3>
-    <p class="text-center text-muted mb-4">
+    <hr class="my-5 border-secondary">
+
+    <!-- EVENTS -->
+    <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;"><i class="bi bi-calendar-event"></i> Sun & Moon Rise/Set Times</h3>
+    <p class="text-center mb-4" style="color: #d2af26; text-shadow: 0 0 6px #171819;">
       <i class="bi bi-info-circle"></i> Powered by Radiant Drift API
     </p>
     
-    {% if events %}
-      <div class="row g-4" id="events-container">
-        {% for e in events %}
-          <div class="col-12 col-md-6 col-lg-4">
-            <div class="card bg-secondary text-light shadow-lg h-100">
-              <div class="card-body">
-                <h5 class="card-title">{{ e.body|title }}</h5>
-                <h6 class="card-subtitle mb-2 text-warning">{{ e.type|title }}</h6>
-                <ul class="list-unstyled mt-3 mb-4">
-                  {% if e.peak %}
-                  <li><strong>Peak/Transit:</strong> {{ e.peak|slice:":19" }}</li>
-                  {% endif %}
-                  {% if e.rise %}
-                  <li><strong>Rise:</strong> {{ e.rise|slice:":19" }}</li>
-                  {% endif %}
-                  {% if e.transit %}
-                  <li><strong>Transit:</strong> {{ e.transit|slice:":19" }}</li>
-                  {% endif %}
-                  {% if e.set %}
-                  <li><strong>Set:</strong> {{ e.set|slice:":19" }}</li>
-                  {% endif %}
-                  {% if e.obscuration %}
-                    <li><strong>Obscuration:</strong> {{ e.obscuration }}</li>
-                  {% endif %}
-                </ul>
+    <div id="events-container" class="row g-4"></div>
 
-                <details class="mt-3">
-                  <summary class="text-info">More Details</summary>
-                  <pre class="bg-dark text-success p-2 rounded mt-2 small">{{ e.highlights|safe }}</pre>
-                </details>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="text-center my-4" style="display: none;">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2">Loading more events...</p>
+    </div>
 
-      <!-- Loading Spinner -->
-      <div id="loading-spinner" class="text-center my-4" style="display: none;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="mt-2">Loading more events...</p>
-      </div>
-
-      <!-- End of Events Message -->
-      <div id="end-message" class="alert alert-info text-center" style="display: none;">
-        <i class="bi bi-check-circle"></i> All events loaded
-      </div>
+    <!-- End of Events Message -->
+    <div id="end-message" class="alert alert-info text-center" style="display: none;"><i class="bi bi-check-circle"></i> All events loaded</div>
 
       <!-- Error Message -->
       <div id="error-message" class="alert alert-danger text-center" style="display: none;">
@@ -322,147 +222,250 @@
       </div>
     </div>
     {% endif %}
+    <!-- Error Message -->
+    <div id="error-message" class="alert alert-danger text-center" style="display: none;"><i class="bi bi-exclamation-triangle"></i> <span id="error-text">Failed to load events</span>
+      <button class="btn btn-outline-danger btn-sm ms-2" onclick="retryLoad()">Retry</button>
+    </div>
   </div>
 
-  <!-- Bootstrap JS Bundle -->
+  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+  <!-- MAIN SCRIPT (City-based filtering + infinite scroll) -->
   <script>
-    // Infinite scroll implementation
-    let currentOffset = {{ events|length }};
+    /* === CONFIG / STATE === */
+    let selectedLat = "38.8339";    // default Colorado Springs
+    let selectedLon = "-104.8214";
+    let selectedLocationName = "Colorado Springs, CO";
+
+    let offset = 0;
+    const limit = 20;
     let isLoading = false;
-    let hasMore = {{ has_more|yesno:"true,false" }};
+    let hasMore = true;
     let retryCount = 0;
     const maxRetries = 3;
 
-    function createEventCard(event) {
-      const peak = event.peak ? event.peak.slice(0, 19) : 'N/A';
-      const rise = event.rise ? event.rise.slice(0, 19) : 'N/A';
-      const transit = event.transit ? event.transit.slice(0, 19) : 'N/A';
-      const set = event.set ? event.set.slice(0, 19) : 'N/A';
-      
+    // Utility: safe get element
+    function $(id){ return document.getElementById(id); }
+
+    /* === RENDER HELPERS === */
+    function renderBodyCard(body){
       return `
-        <div class="col-12 col-md-6 col-lg-4">
-          <div class="card bg-secondary text-light shadow-lg h-100">
-            <div class="card-body">
-              <h5 class="card-title">${event.body.charAt(0).toUpperCase() + event.body.slice(1)}</h5>
-              <h6 class="card-subtitle mb-2 text-warning">${event.type ? event.type.charAt(0).toUpperCase() + event.type.slice(1) : 'Rise-Set'}</h6>
-              <ul class="list-unstyled mt-3 mb-4">
-                ${event.peak ? `<li><strong>Peak/Transit:</strong> ${peak}</li>` : ''}
-                ${event.rise ? `<li><strong>Rise:</strong> ${rise}</li>` : ''}
-                ${event.transit ? `<li><strong>Transit:</strong> ${transit}</li>` : ''}
-                ${event.set ? `<li><strong>Set:</strong> ${set}</li>` : ''}
-                ${event.obscuration ? `<li><strong>Obscuration:</strong> ${event.obscuration}</li>` : ''}
+      <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+        <div class="card bg-dark border-primary text-light shadow h-100">
+          <div class="card-body">
+            <h5 class="card-title text-primary"><i class="bi bi-circle-fill"></i> ${body.name}</h5>
+            ${body.nextVisibleStr ? `<div class="alert alert-info py-2 mb-3"><small><strong>Next Visible:</strong><br>${body.nextVisibleStr.slice(0,10)} ${body.nextVisibleStr.slice(11,16)} UTC</small></div>` : `<div class="alert alert-secondary py-2 mb-3"><small>Visibility data unavailable.</small></div>`}
+            <details class="mt-2"><summary class="text-warning" style="cursor:pointer;">Physical Properties</summary>
+              <ul class="list-unstyled mt-2 small">
+                ${body.meanRadius ? `<li><strong>Radius:</strong> ${body.meanRadius.toFixed(0)} km</li>` : ""}
+                ${body.mass?.massValue ? `<li><strong>Mass:</strong> ${body.mass.massValue} × 10^${body.mass.massExponent} kg</li>` : ""}
+                ${body.density ? `<li><strong>Density:</strong> ${body.density.toFixed(2)} g/cm³</li>` : ""}
+                ${body.gravity ? `<li><strong>Gravity:</strong> ${body.gravity.toFixed(2)} m/s²</li>` : ""}
+                ${body.avgTemp ? `<li><strong>Avg Temp:</strong> ${body.avgTemp} K</li>` : ""}
               </ul>
-              <details class="mt-3">
-                <summary class="text-info">More Details</summary>
-                <pre class="bg-dark text-success p-2 rounded mt-2 small">${JSON.stringify(event.highlights, null, 2)}</pre>
-              </details>
-            </div>
+            </details>
+            ${body.moons?.length ? `<details class="mt-2"><summary class="text-info">Moons (${body.moons.length})</summary><div class="mt-2 small" style="max-height:100px; overflow-y:auto;">${body.moons.map(m => `<span class="badge bg-secondary me-1 mb-1">${m.moon || m.name || ''}</span>`).join("")}</div></details>` : ""}
           </div>
         </div>
-      `;
+      </div>`;
     }
 
-    function showLoading() {
-      document.getElementById('loading-spinner').style.display = 'block';
-      document.getElementById('end-message').style.display = 'none';
-      document.getElementById('error-message').style.display = 'none';
+    function createEventCard(event){
+      const peak = event.peak ? event.peak.slice(0,19) : 'N/A';
+      const rise = event.rise ? event.rise.slice(0,19) : 'N/A';
+      const transit = event.transit ? event.transit.slice(0,19) : 'N/A';
+      const set = event.set ? event.set.slice(0,19) : 'N/A';
+      const eventId = (event.body + '_' + event.type + '_' + (event.peak || '')).replaceAll(' ', '_');
+
+      return `
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card bg-secondary text-light shadow-lg h-100">
+          <div class="position-absolute top-0 end-0 p-2">
+            <i class="bi bi-globe-asia-australia favorite-event-toggle text-info" data-event-id="${eventId}"
+               data-body="${event.body}" data-type="${event.type}"
+               data-peak="${event.peak || ''}" data-rise="${event.rise || ''}"
+               data-transit="${event.transit || ''}" data-set="${event.set || ''}"
+               style="cursor:pointer; font-size:1.4rem;"></i>
+          </div>
+          <div class="card-body">
+            <h5 class="card-title">${event.body}</h5>
+            <h6 class="card-subtitle mb-2 text-warning">${event.type}</h6>
+            <ul class="list-unstyled mt-3 mb-4">
+              ${event.peak ? `<li><strong>Peak/Transit:</strong> ${peak}</li>` : ''}
+              ${event.rise ? `<li><strong>Rise:</strong> ${rise}</li>` : ''}
+              ${event.transit ? `<li><strong>Transit:</strong> ${transit}</li>` : ''}
+              ${event.set ? `<li><strong>Set:</strong> ${set}</li>` : ''}
+              ${event.obscuration ? `<li><strong>Obscuration:</strong> ${event.obscuration}</li>` : ''}
+            </ul>
+          </div>
+        </div>
+      </div>`;
     }
 
-    function hideLoading() {
-      document.getElementById('loading-spinner').style.display = 'none';
+    /* === FAVORITE (event) HANDLING - event delegation for dynamic items === */
+    document.addEventListener('click', function(e){
+      const el = e.target.closest('.favorite-event-toggle');
+      if (!el) return;
+      e.stopPropagation();
+
+      const params = new URLSearchParams({
+        event_id: el.dataset.eventId || `${el.dataset.body}_${el.dataset.type}_${el.dataset.peak}`,
+        body: el.dataset.body || '',
+        type: el.dataset.type || '',
+        peak: el.dataset.peak || '',
+        rise: el.dataset.rise || '',
+        transit: el.dataset.transit || '',
+        set: el.dataset.set || ''
+      });
+
+      fetch("{% url 'toggle_event_favorite' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.redirect) { window.location.href = data.redirect; return; }
+        if (data.favorited) {
+          el.classList.remove('text-info'); el.classList.add('text-warning');
+        } else {
+          el.classList.remove('text-warning'); el.classList.add('text-info');
+        }
+      })
+      .catch(err => console.error('Favorite toggle error', err));
+    });
+
+    /* === LOAD CELESTIAL BODIES === */
+    function loadCelestialBodies(){
+      const container = $('celestial-container');
+      const loader = $('celestial-loading');
+      container.innerHTML = '';
+      loader.style.display = 'block';
+
+      fetch(`/api/celestial-bodies/?lat=${encodeURIComponent(selectedLat)}&lon=${encodeURIComponent(selectedLon)}`)
+        .then(r => r.json())
+        .then(data => {
+          loader.style.display = 'none';
+          const bodies = data.bodies || [];
+          bodies.forEach(b => container.insertAdjacentHTML('beforeend', renderBodyCard(b)));
+        })
+        .catch(err => {
+          loader.style.display = 'none';
+          console.error('Failed fetching celestial bodies', err);
+        });
     }
 
-    function showEndMessage() {
-      document.getElementById('end-message').style.display = 'block';
-      hideLoading();
+    function renderEvents(events) {
+      const container = $('events-container');
+      events.forEach(event => {
+        container.insertAdjacentHTML("beforeend", createEventCard(event));
+      });
     }
-
-    function showError(message) {
-      document.getElementById('error-text').textContent = message;
-      document.getElementById('error-message').style.display = 'block';
-      hideLoading();
-    }
-
-    function loadMoreEvents() {
+    
+    /* === LOAD EVENTS (with infinite scroll) === */
+    function loadMoreEvents(){
       if (isLoading || !hasMore) return;
-
       isLoading = true;
-      showLoading();
+      $('loading-spinner').style.display = 'block';
+      $('error-message').style.display = 'none';
 
-      fetch(`/api/events/?offset=${currentOffset}&limit=20`)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          return response.json();
+      fetch(`/api/events/?offset=${offset}&limit=${limit}&lat=${encodeURIComponent(selectedLat)}&lon=${encodeURIComponent(selectedLon)}`)
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
         })
         .then(data => {
-          if (data.events && data.events.length > 0) {
-            const container = document.getElementById('events-container');
-            data.events.forEach(event => {
-              container.insertAdjacentHTML('beforeend', createEventCard(event));
-            });
-            currentOffset += data.events.length;
-            hasMore = data.has_more;
-            
-            if (!hasMore) {
-              showEndMessage();
-            }
-          } else {
+          const events = data.events || [];
+          if (!events.length) {
             hasMore = false;
-            showEndMessage();
+            $('end-message').style.display = 'block';
+            return;
           }
-          retryCount = 0; // Reset retry count on success
+          renderEvents(events);
+          offset += events.length;
+          hasMore = !!data.has_more;
         })
-        .catch(error => {
-          console.error('Error loading events:', error);
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(() => {
-              loadMoreEvents();
-            }, 1000 * retryCount); // Exponential backoff
+        .catch(err => {
+          console.error('Error loading events', err);
+          retryCount++;
+          if (retryCount <= maxRetries) {
+            setTimeout(loadMoreEvents, 1000 * retryCount);
           } else {
-            showError(`Failed to load events: ${error.message}`);
+            $('error-text').textContent = `Failed to load events: ${err.message}`;
+            $('error-message').style.display = 'block';
           }
         })
         .finally(() => {
           isLoading = false;
+          $('loading-spinner').style.display = 'none';
         });
     }
 
-    function retryLoad() {
-      retryCount = 0;
-      loadMoreEvents();
-    }
+    function retryLoad(){ retryCount = 0; loadMoreEvents(); }
 
-    // Debounced scroll handler
-    let scrollTimeout;
-    function handleScroll() {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-        
-        // Load more when user is 200px from bottom
-        if (scrollTop + windowHeight >= documentHeight - 200) {
-          loadMoreEvents();
-        }
-      }, 100);
-    }
-
-    // Initialize scroll listener
-    window.addEventListener('scroll', handleScroll);
-
-    // Load more events on page load if needed
-    document.addEventListener('DOMContentLoaded', function() {
-      if (hasMore && currentOffset < 20) {
-        // If we have more events and haven't loaded the initial batch yet
+    // infinite scroll trigger
+    window.addEventListener('scroll', () => {
+      if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 200)) {
         loadMoreEvents();
       }
     });
+
+    /* === AUTOCOMPLETE (city search) === */
+    let cityTimer = null;
+    const searchInput = $('city-search');
+    const resultsBox = $('search-results');
+
+    searchInput.addEventListener('input', function(){
+      const q = this.value.trim();
+      if (q.length < 2) { resultsBox.style.display = 'none'; return; }
+      clearTimeout(cityTimer);
+      cityTimer = setTimeout(() => {
+        fetch(`/api/search-city/?q=${encodeURIComponent(q)}`)
+          .then(r => r.json())
+          .then(data => {
+            resultsBox.innerHTML = '';
+            const results = data.results || [];
+            if (!results.length) { resultsBox.style.display = 'none'; return; }
+            results.forEach(item => {
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'list-group-item list-group-item-action';
+              btn.textContent = item.name;
+              btn.addEventListener('click', () => {
+                searchInput.value = item.name;
+                selectedLat = item.lat;
+                selectedLon = item.lon;
+                selectedLocationName = item.name;
+                $('location-name').textContent = item.name.split(',')[0] || item.name;
+                resultsBox.style.display = 'none';
+                // reset and load for new location
+                offset = 0; hasMore = true; $('events-container').innerHTML = '';
+                loadCelestialBodies();
+                loadMoreEvents();
+              });
+              resultsBox.appendChild(btn);
+            });
+            resultsBox.style.display = 'block';
+          })
+          .catch(err => { console.error('Search error', err); resultsBox.style.display = 'none'; });
+      }, 300);
+    });
+
+    // hide results when clicking outside
+    document.addEventListener('click', (e) => { if (!e.target.closest('#search-results') && e.target !== searchInput) resultsBox.style.display = 'none'; });
+
+    /* === INITIAL LOAD === */
+    document.addEventListener('DOMContentLoaded', function(){
+      // initial values from template (if desired, could be exposed via data-attrs)
+      $('location-name').textContent = selectedLocationName;
+      loadCelestialBodies();
+      loadMoreEvents();
+    });
   </script>
+
 </body>
 </html>

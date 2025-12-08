@@ -30,6 +30,23 @@ class Favorite(models.Model):
     def __str__(self):
         return f"{self.user.username} -> {self.title or self.image_url}"
 
+
+class EventFavorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    event_id = models.CharField(max_length=255, default="", blank=True) 
+    body = models.CharField(max_length=100)
+    type = models.CharField(max_length=100)
+    peak = models.CharField(max_length=100, blank=True)
+    rise = models.CharField(max_length=100, blank=True)
+    transit = models.CharField(max_length=100, blank=True)
+    set = models.CharField(max_length=100, blank=True)  # should rename later
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.event_id}"
+
+
+
 class UserProfile(models.Model):
     """
     Extended user profile with additional information.

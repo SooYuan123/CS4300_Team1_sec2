@@ -13,8 +13,9 @@ import requests
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
-from .models import Favorite, UserProfile
+from .models import Favorite, EventFavorite, UserProfile
 from .forms import UserUpdateForm, ProfileUpdateForm
+from django.views.decorators.http import require_GET
 from .utils import (
     fetch_astronomical_events,
     fetch_twilight_events,
@@ -205,7 +206,9 @@ def events_api(request):
     try:
         offset = int(request.GET.get("offset", 0))
         limit = int(request.GET.get("limit", 20))
-        latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
+
+        latitude = request.GET.get("lat", "38.8339")
+        longitude = request.GET.get("lon", "-104.8214")
 
         all_events = fetch_all_events(latitude, longitude)
         total = len(all_events)
@@ -223,10 +226,6 @@ def events_api(request):
     except Exception as e:
         return JsonResponse({
             "events": [],
-            "total": 0,
-            "offset": 0,
-            "limit": 0,
-            "has_more": False,
             "error": True,
             "message": str(e),
         }, status=500)
@@ -522,6 +521,99 @@ def toggle_favorite(request):
         return JsonResponse({'favorited': True})
 
 
+def toggle_event_favorite(request):
+    try:
+        print("RAW POST:", request.POST)
+
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {'redirect': '/login/', 'message': 'Please login to add favorites.'},
+                status=401
+            )
+
+        event_id = request.POST.get("event_id")
+        print("EVENT ID RECEIVED:", event_id)
+
+        if not event_id:
+            return JsonResponse({"error": "Missing event_id"}, status=400)
+
+        fav = EventFavorite.objects.filter(user=request.user, event_id=event_id).first()
+        print("FOUND FAVORITE:", fav)
+
+        if fav:
+            fav.delete()
+            print("Deleted favorite.")
+            return JsonResponse({"favorited": False})
+
+        print("Creating new favorite…")
+        created_fav = EventFavorite.objects.create(
+            user=request.user,
+            event_id=event_id,
+            body=request.POST.get("body", ""),
+            type=request.POST.get("type", ""),
+            peak=request.POST.get("peak", ""),
+            rise=request.POST.get("rise", ""),
+            transit=request.POST.get("transit", ""),
+            set=request.POST.get("set", ""),
+        )
+        print("Created:", created_fav)
+
+        return JsonResponse({"favorited": True})
+
+    except Exception as e:
+        import traceback
+        print("ERROR IN toggle_event_favorite:")
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+
+def toggle_event_favorite(request):
+    try:
+        print("RAW POST:", request.POST)
+
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {'redirect': '/login/', 'message': 'Please login to add favorites.'},
+                status=401
+            )
+
+        event_id = request.POST.get("event_id")
+        print("EVENT ID RECEIVED:", event_id)
+
+        if not event_id:
+            return JsonResponse({"error": "Missing event_id"}, status=400)
+
+        fav = EventFavorite.objects.filter(user=request.user, event_id=event_id).first()
+        print("FOUND FAVORITE:", fav)
+
+        if fav:
+            fav.delete()
+            print("Deleted favorite.")
+            return JsonResponse({"favorited": False})
+
+        print("Creating new favorite…")
+        created_fav = EventFavorite.objects.create(
+            user=request.user,
+            event_id=event_id,
+            body=request.POST.get("body", ""),
+            type=request.POST.get("type", ""),
+            peak=request.POST.get("peak", ""),
+            rise=request.POST.get("rise", ""),
+            transit=request.POST.get("transit", ""),
+            set=request.POST.get("set", ""),
+        )
+        print("Created:", created_fav)
+
+        return JsonResponse({"favorited": True})
+
+    except Exception as e:
+        import traceback
+        print("ERROR IN toggle_event_favorite:")
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 def chatbot_api(request):
     """
     Handle chatbot API requests.
@@ -594,8 +686,13 @@ def chatbot_api(request):
 
 @login_required
 def favorites(request):
-    favorites = Favorite.objects.filter(user=request.user)
-    return render(request, "favorites.html", {"favorites": favorites})
+    fav_images = Favorite.objects.filter(user=request.user)
+    fav_events = EventFavorite.objects.filter(user=request.user).order_by("-saved_at")
+
+    return render(request, "favorites.html", {
+        "favorites": fav_images,
+        "event_favorites": fav_events
+    })
 
 
 @login_required
@@ -652,3 +749,46 @@ def profile_edit(request):
     }
 
     return render(request, 'profile_edit.html', context)
+
+
+@require_GET
+def api_celestial_bodies(request):
+    latitude = request.GET.get("lat", 38.8339)
+    longitude = request.GET.get("lon", -104.8214)
+    
+    data = get_celestial_bodies_with_visibility(latitude, longitude)
+    return JsonResponse({"bodies": data}, status=200)
+
+
+@require_GET
+def api_search_city(request):
+    """Search city names via Nominatim."""
+    query = request.GET.get("q", "")
+    if len(query) < 2:
+        return JsonResponse({"results": []})
+
+    try:
+        resp = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "q": query,
+                "format": "json",
+                "limit": 5,
+                "addressdetails": 1,
+            },
+            headers={"User-Agent": "astral-app/1.0"}
+        )
+        data = resp.json()
+
+        results = [
+            {
+                "name": item.get("display_name"),
+                "lat": item.get("lat"),
+                "lon": item.get("lon")
+            }
+            for item in data
+        ]
+        return JsonResponse({"results": results})
+
+    except Exception as e:
+        return JsonResponse({"results": [], "error": str(e)}, status=500)

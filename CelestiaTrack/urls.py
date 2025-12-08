@@ -19,8 +19,17 @@ from django.contrib.auth import views as auth_views
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from home.views import index, events_list, events_api, register, gallery, toggle_favorite, favorites
 from home import views
+from home.views import (
+    index, 
+    events_list, 
+    events_api, 
+    api_celestial_bodies,  
+    register, gallery, 
+    toggle_favorite, 
+    toggle_event_favorite,
+    favorites,)
+
 
 urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='auth/login.html'), name='login'),
@@ -28,9 +37,16 @@ urlpatterns = [
     path('register/', register, name='register'),
     path('', index, name='index'),
     path('events/', events_list, name="events_list"),
+
     path('api/events/', events_api, name='events_api'),
+    path("api/celestial/", api_celestial_bodies),
+    path("api/celestial-bodies/", views.api_celestial_bodies, name="celestial_bodies"),
+    path("api/search-city/", views.api_search_city, name="api_search_city"),
+
+
     path('gallery/', gallery, name='gallery'),
     path('toggle-favorite/', toggle_favorite, name='toggle_favorite'),
+    path('toggle_event_favorite/', toggle_event_favorite, name='toggle_event_favorite'),
     path('favorites/', favorites, name='favorites'),
     path('api/chatbot/', views.chatbot_api, name='chatbot_api'),
     path('admin/', admin.site.urls),
