@@ -24,6 +24,7 @@ from .utils import (
     fetch_rise_set_times,
     fetch_moon_phase,
     fetch_solar_eclipse_data,
+    fetch_weather_forecast,
 )
 
 load_dotenv()
@@ -88,6 +89,7 @@ def events_list(request):
     celestial_bodies = []
     moon_phase = None
     solar_eclipses = []
+    weather_forecast = []
 
     try:
         events_data = fetch_all_events(latitude, longitude)
@@ -126,6 +128,37 @@ def events_list(request):
         except Exception as e:
             print(f"ERROR fetching solar eclipses: {e}")
 
+        # Fetch Open-Meteo Weather
+        try:
+            raw_weather = fetch_weather_forecast(latitude, longitude)
+
+            if raw_weather and 'time' in raw_weather:
+                # Get current hour to filter past data
+                # Note: This uses server time. For local dev, this is your computer time.
+                current_hour = datetime.now().strftime("%Y-%m-%dT%H:00")
+
+                times = raw_weather.get('time', [])
+                covers = raw_weather.get('cloud_cover', [])
+                visibilities = raw_weather.get('visibility', [])
+                precips = raw_weather.get('precipitation_probability', [])
+
+                for i, t in enumerate(times):
+                    # Only add future hours (or current hour)
+                    if t >= current_hour:
+                        weather_forecast.append({
+                            'time': t,
+                            'cloud_cover': covers[i] if i < len(covers) else 0,
+                            'visibility': visibilities[i] if i < len(visibilities) else 0,
+                            'precipitation_probability': precips[i] if i < len(precips) else 0,
+                        })
+
+                        # Stop after we have 12 hours of future data
+                        if len(weather_forecast) >= 12:
+                            break
+
+        except Exception as e:
+            print(f"ERROR fetching weather: {e}")
+
         return render(request, "events_list.html", {
             "events": initial_events,
             "has_more": has_more,
@@ -133,6 +166,7 @@ def events_list(request):
             "location": "Colorado Springs, CO",
             "moon_phase": moon_phase,
             "solar_eclipses": solar_eclipses,
+            "weather_forecast": weather_forecast,
         })
     except Exception as e:
         print(f"ERROR in events_list: {e}")
@@ -143,6 +177,7 @@ def events_list(request):
             "location": "Colorado Springs, CO",
             "moon_phase": None,
             "solar_eclipses": [],
+            "weather_forecast": [],
         })
 
 

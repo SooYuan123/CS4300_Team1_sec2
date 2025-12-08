@@ -56,6 +56,7 @@
     <hr class="my-5 border-secondary">
     {% endif %}
 
+
     <!-- Solar Eclipses Section -->
     {% if solar_eclipses %}
     <div class="mb-5">
@@ -235,6 +236,91 @@
       <div class="alert alert-warning text-center">
         No upcoming events found.
       </div>
+    {% endif %}
+
+    {% if weather_forecast %}
+    <hr class="my-5 border-info" style="opacity: 0.3;">
+
+    <div class="mb-5 pb-5">
+      <h1 class="text-center mb-5 text-glow" style="font-family: 'Orbitron', sans-serif; font-size: 3.5rem;">
+        <i class="bi bi-cloud-sun"></i> Weather Forecast
+      </h1>
+
+      <div class="card bg-dark border-info shadow-lg">
+        <div class="card-header bg-transparent border-info p-3">
+            <h4 class="text-info mb-0 text-center">Viewing Conditions (Next 12 Hours)</h4>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover text-center mb-0 align-middle">
+              <thead>
+                <tr class="text-info" style="font-size: 1.2rem;">
+                  <th class="py-4">Time</th>
+                  <th class="py-4">Cloud Cover</th>
+                  <th class="py-4">Visibility</th>
+                  <th class="py-4">Precipitation</th>
+                  <th class="py-4">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for hour in weather_forecast %}
+                  <tr>
+                      <td class="fs-5">{{ hour.time|slice:"11:16" }}</td>
+
+                      <td style="min-width: 150px;">
+                          <div class="d-flex align-items-center justify-content-center">
+                            <span class="me-2" style="width: 40px;">{{ hour.cloud_cover }}%</span>
+                            <div class="progress flex-grow-1" style="height: 10px; background-color: rgba(255,255,255,0.1);">
+                              {% if hour.cloud_cover < 20 %}
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ hour.cloud_cover }}%"></div>
+                              {% elif hour.cloud_cover < 50 %}
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ hour.cloud_cover }}%"></div>
+                              {% else %}
+                                <div class="progress-bar bg-secondary" role="progressbar" style="width: {{ hour.cloud_cover }}%"></div>
+                              {% endif %}
+                            </div>
+                          </div>
+                      </td>
+
+                      <td class="text-light">
+                        <span class="badge bg-transparent border border-light">{{ hour.visibility|floatformat:0 }} m</span>
+                      </td>
+
+                      <td>
+                          {% if hour.precipitation_probability > 0 %}
+                             <span class="text-info fw-bold"><i class="bi bi-droplet-fill"></i> {{ hour.precipitation_probability }}%</span>
+                          {% else %}
+                             <span class="text-light"><i class="bi bi-droplet"></i> 0%</span>
+                          {% endif %}
+                      </td>
+
+                      <td>
+                          {% if hour.cloud_cover < 20 %}
+                            <div class="text-success">
+                                <i class="bi bi-stars" style="font-size: 1.3rem;"></i>
+                                <span class="fw-bold ms-2">Great</span>
+                            </div>
+                          {% elif hour.cloud_cover < 60 %}
+                            <div class="text-warning">
+                                <i class="bi bi-cloud-moon" style="font-size: 1.3rem;"></i>
+                                <span class="fw-bold ms-2">Fair</span>
+                            </div>
+                          {% else %}
+                            <div class="text-danger">
+                                <i class="bi bi-clouds" style="font-size: 1.3rem;"></i>
+                                <span class="fw-bold ms-2">Poor</span>
+                            </div>
+                          {% endif %}
+                      </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
     {% endif %}
   </div>
 
