@@ -11,9 +11,8 @@ permissions:
 jobs:
   deploy:
     name: Trigger Render Deploy
-    needs: build-test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Trigger Render Deploy Hook
         env:
