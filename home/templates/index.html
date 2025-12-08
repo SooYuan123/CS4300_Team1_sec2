@@ -59,16 +59,16 @@
   </section>
   
   <section class="apod-section text-center my-5 hero">
+      <div class="container">
       {% if space_image %}
         {% if using_jwst %}
-          <!-- JWST Image Display -->
           <h2>Picture of The Day</h2>
 
           {% if space_image.location %}
             <img src="{{ space_image.location }}"
                  alt="JWST Image"
-                 class="img-fluid rounded shadow-lg"
-                 style="max-height: 600px; object-fit: contain; border: none">
+                 class="img-fluid rounded"
+                 style="max-height: 600px; object-fit: contain; box-shadow: 0 0 20px rgba(13, 202, 240, 0.6); border: 1px solid rgba(13, 202, 240, 0.3);">
           {% endif %}
 
           <div class="mt-3">
@@ -77,21 +77,34 @@
             {% endif %}
           </div>
         {% else %}
-          <!-- NASA APOD Display (Original) -->
           <h2>{{ space_image.title }}</h2>
           <p>{{ space_image.date }}</p>
-          {% if space_image.media_type == "image" %}
-            <img src="{{ space_image.url }}" alt="{{ space_image.title }}" class="img-fluid rounded shadow-lg">
-          {% elif space_image.media_type == "video" or space_image.media_type == "other" %}
-            <div class="ratio ratio-16x9">
-              <iframe src="{{ space_image.url }}" title="{{ space_image.title }}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+          {% if space_image.media_type == "video" %}
+            <div class="ratio ratio-16x9 rounded overflow-hidden mx-auto"
+                 style="box-shadow: 0 0 20px rgba(13, 202, 240, 0.6); border: 1px solid rgba(13, 202, 240, 0.3);">
+              <iframe
+                src="{{ space_image.url }}"
+                title="{{ space_image.title }}"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen>
+              </iframe>
             </div>
+          {% else %}
+            <img src="{{ space_image.url }}"
+                 alt="{{ space_image.title }}"
+                 class="img-fluid rounded"
+                 style="box-shadow: 0 0 20px rgba(13, 202, 240, 0.6); border: 1px solid rgba(13, 202, 240, 0.3);">
           {% endif %}
-          <p class="mt-2">{{ space_image.explanation }}</p>
+
+          <p class="mt-4">{{ space_image.explanation }}</p>
         {% endif %}
       {% else %}
         <p>Could not load space image at this time. Please try again later.</p>
       {% endif %}
+      </div>
   </section>
 
   <section id="featured-gallery" class="hero">
