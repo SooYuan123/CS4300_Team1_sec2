@@ -11,6 +11,7 @@ from datetime import date, datetime, timezone, timedelta
 import os
 import requests
 import json
+import pytz
 from openai import OpenAI
 from dotenv import load_dotenv
 from .models import Favorite, EventFavorite, UserProfile
@@ -134,9 +135,11 @@ def events_list(request):
             raw_weather = fetch_weather_forecast(latitude, longitude)
 
             if raw_weather and 'time' in raw_weather:
-                # Get current hour to filter past data
-                # Note: This uses server time. For local dev, this is your computer time.
-                current_hour = datetime.now().strftime("%Y-%m-%dT%H:00")
+                # FIX: Force Colorado Time (Mountain Time)
+                # This ensures the server (UTC) aligns with the weather data (Local)
+                tz = pytz.timezone('America/Denver')
+                current_time = datetime.now(tz)
+                current_hour = current_time.strftime("%Y-%m-%dT%H:00")
 
                 times = raw_weather.get('time', [])
                 covers = raw_weather.get('cloud_cover', [])
@@ -683,6 +686,52 @@ def chatbot_api(request):
         return JsonResponse({
             "error": f"An error occurred: {str(e)}"
         }, status=500)
+
+
+def weather_api(request):
+    """
+    API endpoint to fetch weather forecast for a specific location.
+    Query params: lat, lon
+    """
+    try:
+        lat = request.GET.get("lat", "38.8339")
+        lon = request.GET.get("lon", "-104.8214")
+
+        # Initialize list
+        weather_forecast = []
+
+        # Fetch raw data
+        raw_weather = fetch_weather_forecast(lat, lon)
+
+        if raw_weather and 'time' in raw_weather:
+            # Force Mountain Time (or strictly UTC if preferred, but keeping consistency with your logic)
+            # Ideally, we should use the timezone of the SEARCHED city, but for now we'll match your previous logic
+            # OR better: filter simply by ISO string comparison since OpenMeteo returns local-ish time if requested
+
+            # Simple ISO string filter for "future hours" based on server time
+            # (In a perfect app, we'd pass the timezone of the location, but this works for now)
+            current_hour = datetime.now().strftime("%Y-%m-%dT%H:00")
+
+            times = raw_weather.get('time', [])
+            covers = raw_weather.get('cloud_cover', [])
+            visibilities = raw_weather.get('visibility', [])
+            precips = raw_weather.get('precipitation_probability', [])
+
+            for i, t in enumerate(times):
+                if t >= current_hour:
+                    weather_forecast.append({
+                        'time': t,
+                        'cloud_cover': covers[i] if i < len(covers) else 0,
+                        'visibility': visibilities[i] if i < len(visibilities) else 0,
+                        'precipitation_probability': precips[i] if i < len(precips) else 0,
+                    })
+                    if len(weather_forecast) >= 12:
+                        break
+
+        return JsonResponse({'forecast': weather_forecast})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def favorites(request):

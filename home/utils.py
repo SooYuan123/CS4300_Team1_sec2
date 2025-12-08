@@ -1,6 +1,8 @@
 import os
 import base64
 import requests
+import ephem
+import math
 from datetime import datetime, timedelta, timezone
 from requests.exceptions import HTTPError, RequestException
 from django.conf import settings
@@ -524,35 +526,55 @@ def fetch_celestial_body_positions():
 
 def calculate_next_visibility(body_name, latitude=38.8339, longitude=-104.8214):
     """
-    Calculate when a celestial body will next be visible.
-    Uses Radiant Drift for sun/moon, simplified logic for planets.
-
-    Default Location: Colorado Springs, CO (38.8339°N, -104.8214°W)
+    Calculate the next rising time for a celestial body using PyEphem.
+    This works locally and does not require an API key.
     """
-    body_lower = body_name.lower()
-
     try:
-        # For sun and moon, use Radiant Drift API
-        if body_lower in ["sun", "moon"]:
-            rows = fetch_rise_set_times(body_lower, latitude, longitude)
-            if not rows:
-                return None
+        # 1. Setup Observer (The Viewer)
+        observer = ephem.Observer()
+        observer.lat = str(latitude)
+        observer.lon = str(longitude)
+        observer.elevation = 1800  # Approx elevation for Colorado Springs (meters)
 
-            now = datetime.now(timezone.utc)
+        # Set current time (UTC)
+        observer.date = datetime.now(timezone.utc)
 
-            for row in rows:
-                rise_time = row.get("rise", {})
-                if rise_time and rise_time.get("date"):
-                    rise_date_str = rise_time.get("date")
-                    try:
-                        rise_date = datetime.fromisoformat(rise_date_str.replace("Z", "+00:00"))
-                        if rise_date > now:
-                            return rise_date
-                    except Exception:
-                        continue
+        # 2. Map body name to Ephem object
+        body_map = {
+            'sun': ephem.Sun(),
+            'moon': ephem.Moon(),
+            'mercury': ephem.Mercury(),
+            'venus': ephem.Venus(),
+            'mars': ephem.Mars(),
+            'jupiter': ephem.Jupiter(),
+            'saturn': ephem.Saturn(),
+            'uranus': ephem.Uranus(),
+            'neptune': ephem.Neptune(),
+            'pluto': ephem.Pluto()
+        }
+
+        target_body = body_map.get(body_name.lower())
+
+        if not target_body:
             return None
-        else:
-            # For planets, we can't get precise visibility from available APIs
+
+        # 3. Calculate next rising time
+        # next_rising returns an ephem Date object
+        try:
+            rise_time_ephem = observer.next_rising(target_body)
+
+            # Convert ephem date to Python datetime
+            rise_dt = rise_time_ephem.datetime()
+
+            # Add UTC timezone info (ephem uses UTC by default)
+            rise_dt = rise_dt.replace(tzinfo=timezone.utc)
+
+            return rise_dt
+        except ephem.AlwaysUpError:
+            # Body is circumpolar (always visible, like stars near the pole)
+            return datetime.now(timezone.utc)
+        except ephem.NeverUpError:
+            # Body is never visible (below horizon for this latitude)
             return None
 
     except Exception as e:
