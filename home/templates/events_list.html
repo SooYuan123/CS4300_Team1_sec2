@@ -85,6 +85,9 @@
           </div>
         </div>
         {% endfor %}
+      </div>
+    </div>
+    {% endif %}
     <!-- SEARCH -->
     <div class="mb-5 text-center">
       <div class="position-relative mx-auto" style="max-width: 380px; width: 100%;">
@@ -132,11 +135,6 @@
         <i class="bi bi-exclamation-triangle"></i> <span id="error-text">Failed to load events</span>
         <button class="btn btn-outline-danger btn-sm ms-2" onclick="retryLoad()">Retry</button>
       </div>
-    {% else %}
-      <div class="alert alert-warning text-center">
-        No upcoming events found.
-      </div>
-    {% endif %}
 
     {% if weather_forecast %}
     <hr class="my-5 border-info" style="opacity: 0.3;">

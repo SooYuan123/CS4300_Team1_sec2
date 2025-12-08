@@ -11,6 +11,7 @@ from datetime import date, datetime, timezone, timedelta
 import os
 import requests
 import json
+import pytz
 from openai import OpenAI
 from dotenv import load_dotenv
 from .models import Favorite, EventFavorite, UserProfile
@@ -134,9 +135,11 @@ def events_list(request):
             raw_weather = fetch_weather_forecast(latitude, longitude)
 
             if raw_weather and 'time' in raw_weather:
-                # Get current hour to filter past data
-                # Note: This uses server time. For local dev, this is your computer time.
-                current_hour = datetime.now().strftime("%Y-%m-%dT%H:00")
+                # FIX: Force Colorado Time (Mountain Time)
+                # This ensures the server (UTC) aligns with the weather data (Local)
+                tz = pytz.timezone('America/Denver')
+                current_time = datetime.now(tz)
+                current_hour = current_time.strftime("%Y-%m-%dT%H:00")
 
                 times = raw_weather.get('time', [])
                 covers = raw_weather.get('cloud_cover', [])
