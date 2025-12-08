@@ -84,103 +84,11 @@ def gallery(request):
 # Events pages / API
 # -------------------------
 def events_list(request):
-    """Render the events page with first 20 events and celestial body positions"""
-    latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
+    """Lightweight events page (no expensive API calls)."""
+    return render(request, "events_list.html", {
+        "location": "Colorado Springs, CO",
+    })
 
-    # Defaults in case downstream calls fail
-    celestial_bodies = []
-    moon_phase = None
-    solar_eclipses = []
-    weather_forecast = []
-
-    try:
-        events_data = fetch_all_events(latitude, longitude)
-        print(f"DEBUG: Fetched {len(events_data)} total events")
-
-        initial_events = events_data[:20]
-        has_more = len(events_data) > 20
-
-        print(f"DEBUG: Initial events: {len(initial_events)}, has_more: {has_more}")
-
-        # Fetch Celestial Body Positions
-        try:
-            celestial_bodies = get_celestial_bodies_with_visibility(
-                latitude=float(latitude),
-                longitude=float(longitude)
-            )
-            print(f"DEBUG: Fetched {len(celestial_bodies)} celestial bodies")
-        except Exception as e:
-            print(f"ERROR fetching celestial bodies: {e}")
-
-        # Fetch current moon phase
-        try:
-            moon_phase = fetch_moon_phase(
-                datetime.now(timezone.utc),
-                float(latitude),
-                float(longitude)
-            )
-        except Exception as e:
-            print(f"ERROR fetching moon phase: {e}")
-
-        # Fetch upcoming solar eclipses
-        try:
-            solar_eclipses = fetch_solar_eclipse_data()
-            if isinstance(solar_eclipses, dict) and 'response' in solar_eclipses:
-                solar_eclipses = list(solar_eclipses['response'].values())[:5]  # Get next 5
-        except Exception as e:
-            print(f"ERROR fetching solar eclipses: {e}")
-
-        # Fetch Open-Meteo Weather
-        try:
-            # Get full data
-            weather_data = fetch_weather_forecast(latitude, longitude)
-            raw_hourly = weather_data.get('hourly', {})
-
-            if raw_hourly and 'time' in raw_hourly:
-                # Dynamic Timezone Logic (Same as API)
-                utc_offset_sec = weather_data.get('utc_offset_seconds', 0)
-                now_utc = datetime.now(timezone.utc)
-                current_local_time = now_utc + timedelta(seconds=utc_offset_sec)
-                current_hour_str = current_local_time.strftime("%Y-%m-%dT%H:00")
-
-                times = raw_hourly.get('time', [])
-                covers = raw_hourly.get('cloud_cover', [])
-                visibilities = raw_hourly.get('visibility', [])
-                precips = raw_hourly.get('precipitation_probability', [])
-
-                for i, t in enumerate(times):
-                    if t >= current_hour_str:
-                        weather_forecast.append({
-                            'time': t,
-                            'cloud_cover': covers[i] if i < len(covers) else 0,
-                            'visibility': visibilities[i] if i < len(visibilities) else 0,
-                            'precipitation_probability': precips[i] if i < len(precips) else 0,
-                        })
-                        if len(weather_forecast) >= 12:
-                            break
-        except Exception as e:
-            print(f"ERROR fetching weather: {e}")
-
-        return render(request, "events_list.html", {
-            "events": initial_events,
-            "has_more": has_more,
-            "celestial_bodies": celestial_bodies,
-            "location": "Colorado Springs, CO",
-            "moon_phase": moon_phase,
-            "solar_eclipses": solar_eclipses,
-            "weather_forecast": weather_forecast,
-        })
-    except Exception as e:
-        print(f"ERROR in events_list: {e}")
-        return render(request, "events_list.html", {
-            "events": [],
-            "has_more": False,
-            "celestial_bodies": [],
-            "location": "Colorado Springs, CO",
-            "moon_phase": None,
-            "solar_eclipses": [],
-            "weather_forecast": [],
-        })
 
 
 def _earliest_peak_from_events(events):

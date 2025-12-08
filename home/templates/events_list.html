@@ -16,7 +16,7 @@
 {% include 'header.html' %}
 <body class="bg-dark text-light">
   <div class="container my-5">
-    <h2 class="text-center mb-5" style="font-family: 'Orbitron', sans-serif;">Astronomical Events & Data</h2>
+    <h1 class="text-center mb-5 text-glow" style="font-family: 'Orbitron', sans-serif; font-size: 3.5rem;">Astronomical Events & Data</h1>
 
     {% if moon_phase %}
     <div class="mb-5">
@@ -86,7 +86,7 @@
     </div>
 
     <div class="mb-5">
-      <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;"><i class="bi bi-stars"></i> Celestial Bodies</h3>
+      <h1 class="text-center mb-5 text-glow" style="font-family: 'Orbitron', sans-serif; font-size: 3.5rem;"><i class="bi bi-stars"></i> Celestial Bodies</h1>
       <p class="text-center mb-4" style="color: #d2af26; text-shadow: 0 0 6px #171819;">
         <i class="bi bi-geo-alt"></i> Event Visibility Times for
         <span id="location-name">{{ location }}</span>
@@ -101,7 +101,7 @@
 
     <hr class="my-5 border-secondary">
 
-    <h3 class="text-center mb-4" style="font-family: 'Orbitron', sans-serif;"><i class="bi bi-calendar-event"></i> Sun & Moon Rise/Set Times</h3>
+    <h1 class="text-center mb-5 text-glow" style="font-family: 'Orbitron', sans-serif; font-size: 3.5rem;"><i class="bi bi-calendar-event"></i> Sun & Moon Rise/Set Times</h1>
     <p class="text-center mb-4" style="color: #d2af26; text-shadow: 0 0 6px #171819;">
       <i class="bi bi-info-circle"></i> Powered by Radiant Drift API
     </p>
@@ -456,12 +456,14 @@
     });
 
     /* === INITIAL LOAD === */
-    document.addEventListener('DOMContentLoaded', function(){
-      $('location-name').textContent = selectedLocationName;
-      loadCelestialBodies();
-      loadMoreEvents();
-      loadWeatherForecast(); // Load initial weather
-    });
+    document.addEventListener("DOMContentLoaded", () => {
+    loadCelestialBodies()
+    loadMoreEvents()
+    loadWeatherForecast()
+    loadMoonPhase()
+    loadSolarEclipses()
+})
+;
   </script>
 
 </body>
