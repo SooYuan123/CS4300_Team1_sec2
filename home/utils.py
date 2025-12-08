@@ -379,10 +379,8 @@ def fetch_weather_forecast(latitude, longitude):
         # Re-use the existing OPEN_METEO_API_BASE
         r = requests.get(OPEN_METEO_API_BASE, params=params, timeout=10)
         r.raise_for_status()
-        data = r.json()
-
-        # Return the hourly data block
-        return data.get("hourly", {})
+        # Return the whole dictionary
+        return r.json()
     except Exception as e:
         print(f"Error fetching weather forecast: {e}")
         return {}
