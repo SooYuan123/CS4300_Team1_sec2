@@ -132,34 +132,32 @@ def events_list(request):
 
         # Fetch Open-Meteo Weather
         try:
-            raw_weather = fetch_weather_forecast(latitude, longitude)
+            # Get full data
+            weather_data = fetch_weather_forecast(latitude, longitude)
+            raw_hourly = weather_data.get('hourly', {})
 
-            if raw_weather and 'time' in raw_weather:
-                # FIX: Force Colorado Time (Mountain Time)
-                # This ensures the server (UTC) aligns with the weather data (Local)
-                tz = pytz.timezone('America/Denver')
-                current_time = datetime.now(tz)
-                current_hour = current_time.strftime("%Y-%m-%dT%H:00")
+            if raw_hourly and 'time' in raw_hourly:
+                # Dynamic Timezone Logic (Same as API)
+                utc_offset_sec = weather_data.get('utc_offset_seconds', 0)
+                now_utc = datetime.now(timezone.utc)
+                current_local_time = now_utc + timedelta(seconds=utc_offset_sec)
+                current_hour_str = current_local_time.strftime("%Y-%m-%dT%H:00")
 
-                times = raw_weather.get('time', [])
-                covers = raw_weather.get('cloud_cover', [])
-                visibilities = raw_weather.get('visibility', [])
-                precips = raw_weather.get('precipitation_probability', [])
+                times = raw_hourly.get('time', [])
+                covers = raw_hourly.get('cloud_cover', [])
+                visibilities = raw_hourly.get('visibility', [])
+                precips = raw_hourly.get('precipitation_probability', [])
 
                 for i, t in enumerate(times):
-                    # Only add future hours (or current hour)
-                    if t >= current_hour:
+                    if t >= current_hour_str:
                         weather_forecast.append({
                             'time': t,
                             'cloud_cover': covers[i] if i < len(covers) else 0,
                             'visibility': visibilities[i] if i < len(visibilities) else 0,
                             'precipitation_probability': precips[i] if i < len(precips) else 0,
                         })
-
-                        # Stop after we have 12 hours of future data
                         if len(weather_forecast) >= 12:
                             break
-
         except Exception as e:
             print(f"ERROR fetching weather: {e}")
 
@@ -691,34 +689,38 @@ def chatbot_api(request):
 def weather_api(request):
     """
     API endpoint to fetch weather forecast for a specific location.
-    Query params: lat, lon
+    Calculates 'current time' based on the location's UTC offset.
     """
     try:
         lat = request.GET.get("lat", "38.8339")
         lon = request.GET.get("lon", "-104.8214")
 
-        # Initialize list
         weather_forecast = []
 
-        # Fetch raw data
-        raw_weather = fetch_weather_forecast(lat, lon)
+        # Fetch full data (includes 'hourly' and 'utc_offset_seconds')
+        data = fetch_weather_forecast(lat, lon)
+        raw_hourly = data.get('hourly', {})
 
-        if raw_weather and 'time' in raw_weather:
-            # Force Mountain Time (or strictly UTC if preferred, but keeping consistency with your logic)
-            # Ideally, we should use the timezone of the SEARCHED city, but for now we'll match your previous logic
-            # OR better: filter simply by ISO string comparison since OpenMeteo returns local-ish time if requested
+        if raw_hourly and 'time' in raw_hourly:
+            # 1. Get the offset for this location (e.g., -25200 seconds for MST)
+            utc_offset_sec = data.get('utc_offset_seconds', 0)
 
-            # Simple ISO string filter for "future hours" based on server time
-            # (In a perfect app, we'd pass the timezone of the location, but this works for now)
-            current_hour = datetime.now().strftime("%Y-%m-%dT%H:00")
+            # 2. Calculate "Now" at that location
+            # Start with current UTC time -> Add the location's offset
+            now_utc = datetime.now(timezone.utc)
+            current_local_time = now_utc + timedelta(seconds=utc_offset_sec)
 
-            times = raw_weather.get('time', [])
-            covers = raw_weather.get('cloud_cover', [])
-            visibilities = raw_weather.get('visibility', [])
-            precips = raw_weather.get('precipitation_probability', [])
+            # 3. Format to match API string "YYYY-MM-DDTHH:00"
+            current_hour_str = current_local_time.strftime("%Y-%m-%dT%H:00")
+
+            times = raw_hourly.get('time', [])
+            covers = raw_hourly.get('cloud_cover', [])
+            visibilities = raw_hourly.get('visibility', [])
+            precips = raw_hourly.get('precipitation_probability', [])
 
             for i, t in enumerate(times):
-                if t >= current_hour:
+                # Compare the Location's Local Time vs The Forecast Time
+                if t >= current_hour_str:
                     weather_forecast.append({
                         'time': t,
                         'cloud_cover': covers[i] if i < len(covers) else 0,
