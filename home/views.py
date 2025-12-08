@@ -22,7 +22,11 @@ from .utils import (
     fetch_meteor_shower_events,
     fetch_fireball_events,
     get_celestial_bodies_with_visibility,
-    fetch_rise_set_times,)
+    fetch_rise_set_times,
+    fetch_moon_phase,
+    fetch_solar_eclipse_data,
+    fetch_weather_forecast,
+)
 
 load_dotenv()
 
@@ -79,15 +83,103 @@ def gallery(request):
 # Events pages / API
 # -------------------------
 def events_list(request):
-    """Render an empty page shell; fetch data async via JS."""
-    return render(request, "events_list.html", {
-        "events": [],
-        "has_more": True,   # JS will actually check with API
-        "celestial_bodies": [],
-        "location": "Colorado Springs, CO",
-        "moon_phase": None,
-        "solar_eclipses": [],
-    })
+    """Render the events page with first 20 events and celestial body positions"""
+    latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
+
+    # Defaults in case downstream calls fail
+    celestial_bodies = []
+    moon_phase = None
+    solar_eclipses = []
+    weather_forecast = []
+
+    try:
+        events_data = fetch_all_events(latitude, longitude)
+        print(f"DEBUG: Fetched {len(events_data)} total events")
+
+        initial_events = events_data[:20]
+        has_more = len(events_data) > 20
+
+        print(f"DEBUG: Initial events: {len(initial_events)}, has_more: {has_more}")
+
+        # Fetch Celestial Body Positions
+        try:
+            celestial_bodies = get_celestial_bodies_with_visibility(
+                latitude=float(latitude),
+                longitude=float(longitude)
+            )
+            print(f"DEBUG: Fetched {len(celestial_bodies)} celestial bodies")
+        except Exception as e:
+            print(f"ERROR fetching celestial bodies: {e}")
+
+        # Fetch current moon phase
+        try:
+            moon_phase = fetch_moon_phase(
+                datetime.now(timezone.utc),
+                float(latitude),
+                float(longitude)
+            )
+        except Exception as e:
+            print(f"ERROR fetching moon phase: {e}")
+
+        # Fetch upcoming solar eclipses
+        try:
+            solar_eclipses = fetch_solar_eclipse_data()
+            if isinstance(solar_eclipses, dict) and 'response' in solar_eclipses:
+                solar_eclipses = list(solar_eclipses['response'].values())[:5]  # Get next 5
+        except Exception as e:
+            print(f"ERROR fetching solar eclipses: {e}")
+
+        # Fetch Open-Meteo Weather
+        try:
+            raw_weather = fetch_weather_forecast(latitude, longitude)
+
+            if raw_weather and 'time' in raw_weather:
+                # Get current hour to filter past data
+                # Note: This uses server time. For local dev, this is your computer time.
+                current_hour = datetime.now().strftime("%Y-%m-%dT%H:00")
+
+                times = raw_weather.get('time', [])
+                covers = raw_weather.get('cloud_cover', [])
+                visibilities = raw_weather.get('visibility', [])
+                precips = raw_weather.get('precipitation_probability', [])
+
+                for i, t in enumerate(times):
+                    # Only add future hours (or current hour)
+                    if t >= current_hour:
+                        weather_forecast.append({
+                            'time': t,
+                            'cloud_cover': covers[i] if i < len(covers) else 0,
+                            'visibility': visibilities[i] if i < len(visibilities) else 0,
+                            'precipitation_probability': precips[i] if i < len(precips) else 0,
+                        })
+
+                        # Stop after we have 12 hours of future data
+                        if len(weather_forecast) >= 12:
+                            break
+
+        except Exception as e:
+            print(f"ERROR fetching weather: {e}")
+
+        return render(request, "events_list.html", {
+            "events": initial_events,
+            "has_more": has_more,
+            "celestial_bodies": celestial_bodies,
+            "location": "Colorado Springs, CO",
+            "moon_phase": moon_phase,
+            "solar_eclipses": solar_eclipses,
+            "weather_forecast": weather_forecast,
+        })
+    except Exception as e:
+        print(f"ERROR in events_list: {e}")
+        return render(request, "events_list.html", {
+            "events": [],
+            "has_more": False,
+            "celestial_bodies": [],
+            "location": "Colorado Springs, CO",
+            "moon_phase": None,
+            "solar_eclipses": [],
+            "weather_forecast": [],
+        })
 
 
 def _earliest_peak_from_events(events):

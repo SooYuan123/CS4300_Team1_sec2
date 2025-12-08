@@ -361,6 +361,30 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
         print(f"Error fetching twilight events: {e}")
         return []
 
+
+def fetch_weather_forecast(latitude, longitude):
+    """
+    Fetch cloud cover and visibility data from Open-Meteo.
+    """
+    try:
+        params = {
+            "latitude": float(latitude),
+            "longitude": float(longitude),
+            "hourly": "cloud_cover,visibility,precipitation_probability",
+            "timezone": "auto",
+        }
+
+        # Re-use the existing OPEN_METEO_API_BASE
+        r = requests.get(OPEN_METEO_API_BASE, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+
+        # Return the hourly data block
+        return data.get("hourly", {})
+    except Exception as e:
+        print(f"Error fetching weather forecast: {e}")
+        return {}
+
 # -------------------------
 # AMS Meteors – showers + fireballs (optional)
 # -------------------------
