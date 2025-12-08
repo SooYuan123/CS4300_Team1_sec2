@@ -28,7 +28,10 @@ from home.views import (
     register, gallery, 
     toggle_favorite, 
     toggle_event_favorite,
-    favorites,)
+    favorites,
+    chatbot_api,
+    weather_api,
+)
 
 
 urlpatterns = [
@@ -39,6 +42,7 @@ urlpatterns = [
     path('events/', events_list, name="events_list"),
 
     path('api/events/', events_api, name='events_api'),
+    path('api/weather/', weather_api, name='weather_api'),
     path("api/celestial/", api_celestial_bodies),
     path("api/celestial-bodies/", views.api_celestial_bodies, name="celestial_bodies"),
     path("api/search-city/", views.api_search_city, name="api_search_city"),
