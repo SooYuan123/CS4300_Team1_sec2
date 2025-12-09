@@ -32,9 +32,6 @@ RADIANT_DRIFT_API_KEY = os.getenv('RADIANT_DRIFT_API_KEY')
 # Solar System OpenData API
 SSOD_APP_ID = config('SSOD_APP_ID', default=None)
 
-# AMS Meteors API (optional but nice to have)
-AMS_METEORS_API_KEY = config('AMS_METEORS_API_KEY', default='')
-
 SECRET_KEY = config('SECRETKEY', default='django-insecure-j78f(bqzq4)^o!%&8^=iin%os)&t+89phd=^0&g4pvl+^%eeb')
 
 LOGIN_REDIRECT_URL = '/'
@@ -124,7 +121,7 @@ USE_TZ = True
 
 # Static files
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'home/static')
 
 # for localhost testing
 #STATIC_ROOT = os.path.join(BASE_DIR, 'home/static/')
