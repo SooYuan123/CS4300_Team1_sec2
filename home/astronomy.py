@@ -1,6 +1,6 @@
-from django.conf import settings
 import base64
 import requests
+from django.conf import settings
 
 
 def astronomy_get(url, params=None):

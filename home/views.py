@@ -13,9 +13,9 @@ from django.conf import settings
 from django import forms
 from openai import OpenAI
 from dotenv import load_dotenv
+from django.views.decorators.http import require_GET
 from .models import Favorite, EventFavorite, UserProfile
 from .forms import UserUpdateForm, ProfileUpdateForm
-from django.views.decorators.http import require_GET
 from .utils import (
     fetch_astronomical_events,
     fetch_twilight_events,
@@ -89,6 +89,8 @@ def gallery(request):
 # -------------------------
 # Events pages / API
 # -------------------------
+
+# pylint: disable=too-many-nested-blocks
 def events_list(request):
     """Render the events page with first 20 events and celestial body positions"""
     latitude, longitude = "38.8339", "-104.8214"  # Colorado Springs, CO
@@ -466,7 +468,7 @@ def index(request):
 # -------------------------
 # Auth
 # -------------------------
-class CustomUserCreationForm(UserCreationForm):
+class CustomUserCreationForm(UserCreationForm):  # pylint: disable=too-many-ancestors
     """Custom registration form with required email"""
     email = forms.EmailField(
         required=True,

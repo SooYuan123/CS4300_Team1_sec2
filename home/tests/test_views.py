@@ -4,11 +4,12 @@ import pytest
 from django.test import TestCase
 from django.urls import reverse
 import requests_mock
+from django.contrib.auth.models import User
+
 from home.views import (
     get_apod_for_date, get_jwst_random_image, get_jwst_recent_images,
     _parse_iso, _earliest_peak_from_events
 )
-from django.contrib.auth.models import User
 
 
 def generate_mock_rows(count):
