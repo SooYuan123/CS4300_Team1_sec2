@@ -1,4 +1,3 @@
-from django.core.cache import cache
 import os
 import base64
 from datetime import datetime, timedelta, timezone
@@ -238,6 +237,7 @@ def fetch_body_position(body, date_time, latitude, longitude):
         print(f"Error fetching position for {body}: {e}")
         return None
 
+
 def fetch_moon_phase(date_time, latitude, longitude):
     """
     Fetch moon phase information from Radiant Drift API.
@@ -294,6 +294,7 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
     except Exception as e:
         print(f"Error fetching solar eclipse data: {e}")
         return []
+
 
 # -------------------------
 # Open-Meteo – twilight events

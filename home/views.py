@@ -1,7 +1,7 @@
 import os
 import json
-from django.core.cache import cache
 from datetime import date, datetime, timezone, timedelta
+from django.core.cache import cache
 import requests
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
@@ -271,6 +271,7 @@ def _parse_iso(dt_str: str):
         return dt
     except Exception:
         return None
+
 
 # -------------------------
 # Index (html-images feature: JWST/NASA)
@@ -605,6 +606,7 @@ def weather_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
 def aurora_api(request):
     """API endpoint to get current Aurora status."""
     data = fetch_aurora_data()
@@ -638,7 +640,8 @@ def event_detail(request):
 
                 prompt = (
                     f"Explain the astronomical event: {body} {event_type} happening around {date_str}. "
-                    "Provide 1 paragraph on what it is scientifically, and 1 paragraph on specific viewing tips (gear, safety, direction). "
+                    "Provide 1 paragraph on what it is scientifically, and 1 paragraph on "
+                    "specific viewing tips (gear, safety, direction). "
                     "Keep it under 200 words. Format with HTML <p> tags."
                 )
 

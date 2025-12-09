@@ -229,12 +229,12 @@ jobs:
 
       - name: Run flake8
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --max-complexity=10 --max-line-length=127 --statistics | tee flake8-report.txt
+          flake8 home CelestiaTrack --count --statistics --show-source --exclude=migrations
+          flake8 home CelestiaTrack --count --max-complexity=10 --max-line-length=127 --statistics | tee flake8-report.txt
 
       - name: Run pylint
         run: |
-          pylint **/*.py | tee pylint-report.txt || true
+          pylint home CelestiaTrack --ignore=migrations | tee pylint-report.txt || true
 
       - name: Upload lint reports
         if: always()  # Upload reports even if previous steps failed
