@@ -230,6 +230,7 @@
       const transit = event.transit ? event.transit.slice(0,19) : 'N/A';
       const set = event.set ? event.set.slice(0,19) : 'N/A';
       const eventId = (event.body + '_' + event.type + '_' + (event.peak || '')).replaceAll(' ', '_');
+      const detailUrl = `/event/detail/?body=${encodeURIComponent(event.body)}&type=${encodeURIComponent(event.type)}&date=${encodeURIComponent(peak)}`;
 
       return `
       <div class="col-12 col-md-6 col-lg-4">
@@ -251,6 +252,11 @@
               ${event.set ? `<li><strong>Set:</strong> ${set}</li>` : ''}
               ${event.obscuration ? `<li><strong>Obscuration:</strong> ${event.obscuration}</li>` : ''}
             </ul>
+          </div>
+          <div class="card-footer bg-transparent border-0 pt-0">
+             <a href="${detailUrl}" class="btn btn-sm btn-info w-100 text-dark fw-bold">
+                 <i class="bi bi-robot"></i> View AI Analysis
+             </a>
           </div>
         </div>
       </div>`;

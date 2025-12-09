@@ -1,5 +1,6 @@
 import os
 import json
+from django.core.cache import cache
 from datetime import date, datetime, timezone, timedelta
 import requests
 from django.shortcuts import render, redirect, get_object_or_404
@@ -610,6 +611,62 @@ def aurora_api(request):
     if data:
         return JsonResponse(data)
     return JsonResponse({'error': 'Unavailable'}, status=503)
+
+
+def event_detail(request):
+    """
+    Displays a detail page for a specific event and generates an AI summary.
+    """
+    # 1. Get params from URL
+    body = request.GET.get('body', 'Unknown Body')
+    event_type = request.GET.get('type', 'Astronomical Event')
+    date_str = request.GET.get('date', 'Upcoming')
+
+    # 2. Check Cache
+    cache_key = f"ai_desc_{body}_{event_type}_{date_str}"
+    # Replace spaces with underscores for safer keys
+    cache_key = cache_key.replace(" ", "_")
+
+    ai_context = cache.get(cache_key)
+
+    # 3. If not cached, call OpenAI
+    if not ai_context:
+        if OPENAI_API_KEY:
+            try:
+                print(f"Generating AI Context for {body}...")
+                client = OpenAI(api_key=OPENAI_API_KEY)
+
+                prompt = (
+                    f"Explain the astronomical event: {body} {event_type} happening around {date_str}. "
+                    "Provide 1 paragraph on what it is scientifically, and 1 paragraph on specific viewing tips (gear, safety, direction). "
+                    "Keep it under 200 words. Format with HTML <p> tags."
+                )
+
+                # Using standard GPT-3.5 for speed
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=300,
+                )
+
+                ai_context = response.choices[0].message.content
+
+                # Cache for 24 hours so we don't pay for this request again
+                cache.set(cache_key, ai_context, 60 * 60 * 24)
+
+            except Exception as e:
+                print(f"Error generating AI context: {e}")
+                ai_context = "<p class='text-danger'>AI Context currently unavailable. Please try again later.</p>"
+        else:
+            ai_context = "<p>AI capabilities are not configured (Missing API Key).</p>"
+
+    context = {
+        'body': body,
+        'type': event_type,
+        'date': date_str,
+        'ai_context': ai_context
+    }
+    return render(request, 'event_detail.html', context)
 
 
 @login_required
