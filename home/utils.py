@@ -390,6 +390,8 @@ def fetch_weather_forecast(latitude, longitude):
 # -------------------------
 # AMS Meteors – showers + fireballs (optional)
 # -------------------------
+
+
 def fetch_meteor_shower_events(from_date=None, to_date=None, api_key=None):
     """AMS meteors (optional): returns list; [] if no key or error."""
     if not api_key:

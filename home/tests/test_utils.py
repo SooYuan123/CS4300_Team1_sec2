@@ -4,6 +4,7 @@ import requests_mock
 from home.utils import fetch_astronomical_events
 from home.views import fetch_all_events
 
+
 MOCK_API_BASE = "https://api.astronomyapi.com/api/v2/bodies/events"
 
 SUCCESS_MOON_DATA = {
@@ -20,6 +21,7 @@ SUCCESS_MOON_DATA = {
         }]
     }
 }
+
 
 def generate_mock_rows(count, body_base_name="Body"):
     rows = []

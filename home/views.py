@@ -73,9 +73,17 @@ def gallery(request):
 
     user_favorites = []
     if request.user.is_authenticated:
-        user_favorites = Favorite.objects.filter(user=request.user).values_list('image_url', flat=True)
-
-    return render(request, "gallery.html", {"images": images})
+        user_favorites = Favorite.objects.filter(
+            user=request.user
+        ).values_list("image_url", flat=True)
+    return render(
+        request,
+        "gallery.html",
+        {
+            "images": images,
+            "user_favorites": list(user_favorites),
+        },
+    )
 
 
 # -------------------------
@@ -358,6 +366,8 @@ def _parse_iso(dt_str: str):
 # -------------------------
 # Index (html-images feature: JWST/NASA)
 # -------------------------
+
+
 def get_jwst_random_image():
     """Fetch a deterministic 'random' JWST image (one per day)."""
     jwst_url = "https://api.jwstapi.com/all/type/jpg?page=1&perPage=30"
@@ -483,6 +493,7 @@ class CustomUserCreationForm(UserCreationForm):
             user.save()
         return user
 
+
 def register(request):
     if request.method == "POST":
         form = CustomUserCreationForm(request.POST)
@@ -564,6 +575,7 @@ def toggle_event_favorite(request):
         print("ERROR IN toggle_event_favorite:")
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
+
 
 def chatbot_api(request):
     """
@@ -686,6 +698,7 @@ def weather_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
 @login_required
 def favorites(request):
     fav_images = Favorite.objects.filter(user=request.user)
@@ -757,7 +770,6 @@ def profile_edit(request):
 def api_celestial_bodies(request):
     latitude = request.GET.get("lat", 38.8339)
     longitude = request.GET.get("lon", -104.8214)
-    
     data = get_celestial_bodies_with_visibility(latitude, longitude)
     return JsonResponse({"bodies": data}, status=200)
 
