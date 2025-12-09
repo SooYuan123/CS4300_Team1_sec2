@@ -2,7 +2,6 @@ import pytest
 from django.urls import reverse
 from django.contrib.auth.models import User
 from home.models import EventFavorite
-from unittest.mock import patch
 
 
 @pytest.mark.django_db
@@ -10,6 +9,7 @@ def test_favorite_event_requires_login(client):
     url = reverse("toggle_event_favorite")
     res = client.post(url, {"event_id": "Sun_Rise_2025"})
     assert res.status_code == 401
+
 
 @pytest.mark.django_db
 def test_favorite_event_add_and_remove(client):
@@ -36,10 +36,10 @@ def test_favorite_event_add_and_remove(client):
     res = client.post(url, data)
     assert EventFavorite.objects.count() == 0
 
+
 @pytest.mark.django_db
 def test_event_favorite_unauth_redirects(client):
     url = reverse("toggle_event_favorite")
     res = client.post(url, {"event_id": "X"})
     assert res.status_code == 401
     assert res.json()["redirect"] == "/login/"
-

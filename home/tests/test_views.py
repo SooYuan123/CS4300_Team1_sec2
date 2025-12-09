@@ -4,11 +4,12 @@ import pytest
 from django.test import TestCase
 from django.urls import reverse
 import requests_mock
+from django.contrib.auth.models import User
+
 from home.views import (
     get_apod_for_date, get_jwst_random_image, get_jwst_recent_images,
     _parse_iso, _earliest_peak_from_events
 )
-from django.contrib.auth.models import User
 
 
 def generate_mock_rows(count):
@@ -20,7 +21,6 @@ def generate_mock_rows(count):
 
 class ViewTests(TestCase):
     """Tests for primary views in home/views.py."""
-
 
     def test_events_api_endpoint_success_and_lazy_loading(self):
         with requests_mock.Mocker() as m:
@@ -413,7 +413,6 @@ class RegisterTests(TestCase):
     def test_register_get(self):
         """Test GET request to register page."""
         response = self.client.get(reverse('register'))
-
         self.assertEqual(response.status_code, 200)
         self.assertIn('form', response.context)
 
@@ -440,15 +439,18 @@ def test_register_get(client):
 
 
 @pytest.mark.django_db
-def test_register_post_success(self):
-    response = self.client.post(reverse('register'), {
-        "username": "newuser",
-        "email": "newuser@example.com",
-        "password1": "strongpass123",
-        "password2": "strongpass123"
-    })
-    self.assertEqual(response.status_code, 302)  # Should redirect
-    self.assertTrue(User.objects.filter(username="newuser").exists())
+def test_register_post_success(client):
+    response = client.post(
+        reverse("register"),
+        {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "password1": "strongpass123",
+            "password2": "strongpass123",
+        },
+    )
+    assert response.status_code == 302  # Should redirect
+    assert User.objects.filter(username="newuser").exists()
 
 
 @pytest.mark.django_db

@@ -13,9 +13,9 @@ from django.conf import settings
 from django import forms
 from openai import OpenAI
 from dotenv import load_dotenv
+from django.views.decorators.http import require_GET
 from .models import Favorite, EventFavorite, UserProfile
 from .forms import UserUpdateForm, ProfileUpdateForm
-from django.views.decorators.http import require_GET
 from .utils import (
     fetch_astronomical_events,
     fetch_twilight_events,
@@ -72,20 +72,29 @@ def gallery(request):
 
     user_favorites = []
     if request.user.is_authenticated:
-        user_favorites = Favorite.objects.filter(user=request.user).values_list('image_url', flat=True)
-
-    return render(request, "gallery.html", {"images": images})
+        user_favorites = Favorite.objects.filter(
+            user=request.user
+        ).values_list("image_url", flat=True)
+    return render(
+        request,
+        "gallery.html",
+        {
+            "images": images,
+            "user_favorites": list(user_favorites),
+        },
+    )
 
 
 # -------------------------
 # Events pages / API
 # -------------------------
+
+# pylint: disable=too-many-nested-blocks
 def events_list(request):
     """Lightweight events page (no expensive API calls)."""
     return render(request, "events_list.html", {
         "location": "Colorado Springs, CO",
     })
-
 
 
 def _earliest_peak_from_events(events):
@@ -363,7 +372,7 @@ def index(request):
 # -------------------------
 # Auth
 # -------------------------
-class CustomUserCreationForm(UserCreationForm):
+class CustomUserCreationForm(UserCreationForm):  # pylint: disable=too-many-ancestors
     """Custom registration form with required email"""
     email = forms.EmailField(
         required=True,
@@ -389,6 +398,7 @@ class CustomUserCreationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
 
 def register(request):
     if request.method == "POST":
@@ -471,6 +481,7 @@ def toggle_event_favorite(request):
         print("ERROR IN toggle_event_favorite:")
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
+
 
 def chatbot_api(request):
     """
@@ -617,6 +628,7 @@ def solar_eclipses_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
 @login_required
 def favorites(request):
     fav_images = Favorite.objects.filter(user=request.user)
@@ -688,7 +700,6 @@ def profile_edit(request):
 def api_celestial_bodies(request):
     latitude = request.GET.get("lat", 38.8339)
     longitude = request.GET.get("lon", -104.8214)
-    
     data = get_celestial_bodies_with_visibility(latitude, longitude)
     return JsonResponse({"bodies": data}, status=200)
 

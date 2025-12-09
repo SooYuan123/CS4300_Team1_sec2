@@ -1,7 +1,8 @@
+from unittest.mock import patch
+
+import requests_mock
 from django.test import TestCase
 from django.conf import settings
-import requests_mock
-from unittest.mock import patch
 from home.astronomy import astronomy_get
 
 
