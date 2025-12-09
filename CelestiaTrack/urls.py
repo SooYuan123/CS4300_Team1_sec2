@@ -18,7 +18,6 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import path
 from django.conf import settings
-from django.conf.urls.static import static
 from home import views
 from home.views import (
     index,
@@ -65,6 +64,7 @@ urlpatterns = [
     path('api/aurora/', aurora_api, name='aurora_api'),
 ]
 
-# Serve media files in development
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
+# Serve media files in all environments (Render included)
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]
