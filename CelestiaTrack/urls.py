@@ -16,20 +16,20 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import path, include
+from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from home import views
 from home.views import (
-    index, 
-    events_list, 
-    events_api, 
-    api_celestial_bodies,  
-    register, gallery, 
-    toggle_favorite, 
+    index,
+    events_list,
+    events_api,
+    api_celestial_bodies,
+    register,
+    gallery,
+    toggle_favorite,
     toggle_event_favorite,
     favorites,
-    chatbot_api,
     weather_api,
 )
 

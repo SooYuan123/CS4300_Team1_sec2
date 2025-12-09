@@ -1,14 +1,15 @@
+from datetime import date
+from unittest.mock import patch
+import pytest
 from django.test import TestCase
 from django.urls import reverse
 import requests_mock
-from datetime import date
+from django.contrib.auth.models import User
+
 from home.views import (
     get_apod_for_date, get_jwst_random_image, get_jwst_recent_images,
-    _parse_iso, _earliest_peak_from_events, fetch_all_events
+    _parse_iso, _earliest_peak_from_events
 )
-import pytest
-from django.contrib.auth.models import User
-from unittest.mock import patch, MagicMock
 
 
 def generate_mock_rows(count):
@@ -440,11 +441,15 @@ def test_register_get(client):
 
 
 @pytest.mark.django_db
-def test_register_post_success(client):
-    response = client.post(reverse("register"),
-                           {"username": "newuser", "email": "newuser@example.com", "password1": "strongpass123", "password2": "strongpass123"})
-    assert response.status_code == 302
-    assert User.objects.filter(username="newuser").exists()
+def test_register_post_success(self):
+    response = self.client.post(reverse('register'), {
+        "username": "newuser",
+        "email": "newuser@example.com",
+        "password1": "strongpass123",
+        "password2": "strongpass123"
+    })
+    self.assertEqual(response.status_code, 302)  # Should redirect
+    self.assertTrue(User.objects.filter(username="newuser").exists())
 
 
 @pytest.mark.django_db

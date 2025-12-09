@@ -1,0 +1,30 @@
+[MAIN]
+load-plugins=pylint_django
+django-settings-module=CelestiaTrack.settings
+ignore=migrations
+
+[FORMAT]
+max-line-length=120
+
+[MESSAGES CONTROL]
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    too-many-lines,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    too-few-public-methods,
+    broad-except,
+    import-outside-toplevel,
+    no-member,
+    duplicate-code,
+    imported-auth-user,
+    too-many-positional-arguments,
+    redefined-outer-name,
+    ungrouped-imports,
+    no-else-return,
+    use-implicit-booleaness-not-comparison,
+    line-too-long

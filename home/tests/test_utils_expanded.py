@@ -1,8 +1,8 @@
+from datetime import datetime
+
 import pytest
 import requests
 import requests_mock
-from datetime import datetime, timezone
-from django.conf import settings
 from home import utils
 
 
@@ -269,7 +269,7 @@ def test_fetch_celestial_body_positions_error(settings):
 # -------------------------------------------------------------------
 
 @pytest.mark.django_db
-def test_calculate_next_visibility_sun_success(monkeypatch):
+def test_calculate_next_visibility_sun_success(_monkeypatch):
     dt = utils.calculate_next_visibility("sun")
     assert isinstance(dt, datetime)
 

@@ -1,12 +1,13 @@
+
 import os
 import base64
+from datetime import datetime, timedelta, timezone
+
 import requests
 import ephem
-import math
-from datetime import datetime, timedelta, timezone
 from requests.exceptions import HTTPError, RequestException
-from django.conf import settings
 from dotenv import load_dotenv
+from django.conf import settings
 
 
 load_dotenv()
@@ -166,9 +167,12 @@ def fetch_rise_set_times(body, latitude, longitude, from_date=None, to_date=None
                     event = {
                         "date": date_key,
                         "body": {"name": body.capitalize()},
-                        "rise": {"date": body_data.get("rise", {}).get("utc")} if "rise" in body_data else None,
-                        "transit": {"date": body_data.get("transit", {}).get("utc")} if "transit" in body_data else None,
-                        "set": {"date": body_data.get("set", {}).get("utc")} if "set" in body_data else None,
+                        "rise": {"date": body_data.get("rise", {}).get("utc")}
+                        if "rise" in body_data else None,
+                        "transit": {"date": body_data.get("transit", {}).get("utc")}
+                        if "transit" in body_data else None,
+                        "set": {"date": body_data.get("set", {}).get("utc")}
+                        if "set" in body_data else None,
                         "events": [
                             {
                                 "type": "rise-set",
@@ -296,7 +300,7 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
 # -------------------------
 # Open-Meteo – twilight events
 # -------------------------
-def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
+def fetch_twilight_events(latitude, longitude, _from_date=None, _to_date=None):
     """
     Open-Meteo: returns list of sunrise/sunset events; logs and returns [] on error.
 
@@ -322,7 +326,7 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
         sunsets = daily.get("sunset", []) or []
 
         events = []
-        for i, date_str in enumerate(dates):
+        for i, _date_str in enumerate(dates):
             # Sunrise
             if i < len(sunrises) and sunrises[i]:
                 events.append({
@@ -389,6 +393,8 @@ def fetch_weather_forecast(latitude, longitude):
 # -------------------------
 # AMS Meteors – showers + fireballs (optional)
 # -------------------------
+
+
 def fetch_meteor_shower_events(from_date=None, to_date=None, api_key=None):
     """AMS meteors (optional): returns list; [] if no key or error."""
     if not api_key:
@@ -432,7 +438,13 @@ def fetch_meteor_shower_events(from_date=None, to_date=None, api_key=None):
         return []
 
 
-def fetch_fireball_events(from_date=None, to_date=None, api_key=None, latitude=None, longitude=None):
+def fetch_fireball_events(
+    from_date=None,
+    to_date=None,
+    api_key=None,
+    latitude=None,
+    longitude=None,
+):  # pylint: disable=unused-argument
     """AMS fireballs (optional): returns list; [] if no key or error."""
     if not api_key:
         print("AMS Meteors API key not provided, skipping fireball data")
