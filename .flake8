@@ -1,0 +1,12 @@
+[flake8]
+# Exclude standard Django folders
+exclude =
+    migrations,
+    __pycache__,
+    manage.py,
+    settings.py,
+    env,
+    .venv,
+    venv
+# Allow lines slightly longer than 79 chars
+max-line-length = 120

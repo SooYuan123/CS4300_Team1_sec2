@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
+
 class HomePageTest(TestCase):
     """Tests the basic functionality of the landing page."""
 

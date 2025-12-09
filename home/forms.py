@@ -73,18 +73,18 @@ class ProfileUpdateForm(forms.ModelForm):
                     # Open image to check dimensions
                     img = Image.open(profile_picture)
                     width, height = img.size
-                    
+
                     # Validate minimum size
                     if width < 200 or height < 200:
                         raise forms.ValidationError(
                             f"Image must be at least 200x200 pixels. Your image is {width}x{height} pixels."
                         )
-                    
+
                     # Reset file pointer for saving
                     profile_picture.seek(0)
                 except Exception as e:
                     if isinstance(e, forms.ValidationError):
                         raise
                     raise forms.ValidationError("Invalid image file. Please upload a valid image.")
-        
+
         return profile_picture

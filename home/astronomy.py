@@ -1,6 +1,7 @@
-from django.conf import settings
 import base64
 import requests
+from django.conf import settings
+
 
 def astronomy_get(url, params=None):
     if not settings.ASTRONOMY_API_APP_ID or not settings.ASTRONOMY_API_APP_SECRET:

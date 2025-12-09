@@ -1,3 +1,14 @@
+import os
+import json
+import base64
+from datetime import date, datetime, timezone, timedelta
+from io import BytesIO
+
+import requests
+from openai import OpenAI
+from dotenv import load_dotenv
+from PIL import Image
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.auth.forms import UserCreationForm
@@ -7,26 +18,20 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.conf import settings
 from django import forms
-from django.views.decorators.http import require_http_methods
-from datetime import date, datetime, timezone, timedelta
-import os
-import requests
-import json
-from openai import OpenAI
-from dotenv import load_dotenv
-from PIL import Image
-from io import BytesIO
-import base64
+from django.views.decorators.http import require_http_methods, require_GET
+
 from .models import Favorite, EventFavorite, UserProfile
 from .forms import UserUpdateForm, ProfileUpdateForm
-from django.views.decorators.http import require_GET
 from .utils import (
     fetch_astronomical_events,
     fetch_twilight_events,
     get_celestial_bodies_with_visibility,
-    fetch_rise_set_times,)
+    fetch_weather_forecast,
+    fetch_aurora_data,
+)
 
 load_dotenv()
+
 
 # Optional API keys for index/gallery helpers
 NASA_API_KEY = os.getenv("NASA_API_KEY")
@@ -72,23 +77,28 @@ def gallery(request):
 
     user_favorites = []
     if request.user.is_authenticated:
-        user_favorites = Favorite.objects.filter(user=request.user).values_list('image_url', flat=True)
-
-    return render(request, "gallery.html", {"images": images})
+        user_favorites = Favorite.objects.filter(
+            user=request.user
+        ).values_list("image_url", flat=True)
+    return render(
+        request,
+        "gallery.html",
+        {
+            "images": images,
+            "user_favorites": list(user_favorites),
+        },
+    )
 
 
 # -------------------------
 # Events pages / API
 # -------------------------
+
+# pylint: disable=too-many-nested-blocks
 def events_list(request):
-    """Render an empty page shell; fetch data async via JS."""
+    """Lightweight events page (no expensive API calls)."""
     return render(request, "events_list.html", {
-        "events": [],
-        "has_more": True,   # JS will actually check with API
-        "celestial_bodies": [],
         "location": "Colorado Springs, CO",
-        "moon_phase": None,
-        "solar_eclipses": [],
     })
 
 
@@ -343,7 +353,7 @@ def index(request):
 # -------------------------
 # Auth
 # -------------------------
-class CustomUserCreationForm(UserCreationForm):
+class CustomUserCreationForm(UserCreationForm):  # pylint: disable=too-many-ancestors
     """Custom registration form with required email"""
     email = forms.EmailField(
         required=True,
@@ -369,6 +379,7 @@ class CustomUserCreationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
 
 def register(request):
     if request.method == "POST":
@@ -453,53 +464,6 @@ def toggle_event_favorite(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-
-def toggle_event_favorite(request):
-    try:
-        print("RAW POST:", request.POST)
-
-        if not request.user.is_authenticated:
-            return JsonResponse(
-                {'redirect': '/login/', 'message': 'Please login to add favorites.'},
-                status=401
-            )
-
-        event_id = request.POST.get("event_id")
-        print("EVENT ID RECEIVED:", event_id)
-
-        if not event_id:
-            return JsonResponse({"error": "Missing event_id"}, status=400)
-
-        fav = EventFavorite.objects.filter(user=request.user, event_id=event_id).first()
-        print("FOUND FAVORITE:", fav)
-
-        if fav:
-            fav.delete()
-            print("Deleted favorite.")
-            return JsonResponse({"favorited": False})
-
-        print("Creating new favorite…")
-        created_fav = EventFavorite.objects.create(
-            user=request.user,
-            event_id=event_id,
-            body=request.POST.get("body", ""),
-            type=request.POST.get("type", ""),
-            peak=request.POST.get("peak", ""),
-            rise=request.POST.get("rise", ""),
-            transit=request.POST.get("transit", ""),
-            set=request.POST.get("set", ""),
-        )
-        print("Created:", created_fav)
-
-        return JsonResponse({"favorited": True})
-
-    except Exception as e:
-        import traceback
-        print("ERROR IN toggle_event_favorite:")
-        traceback.print_exc()
-        return JsonResponse({"error": str(e)}, status=500)
-
-
 def chatbot_api(request):
     """
     Handle chatbot API requests.
@@ -526,12 +490,13 @@ def chatbot_api(request):
         client = OpenAI(api_key=OPENAI_API_KEY)
 
         # Create a system message to set the AI's behavior
-        system_message = """You are an expert astronomy assistant for CelestiaTrack, 
-        a celestial event tracking application. You help users understand astronomy concepts, 
-        celestial events, space phenomena, and answer questions about planets, stars, galaxies, 
-        and the universe. Be informative, engaging, and educational. Keep responses concise 
-        but thorough (2-4 paragraphs maximum unless asked for more detail). Use scientific 
-        accuracy while remaining accessible to general audiences."""
+        system_message = (
+            "You are an expert astronomy assistant for CelestiaTrack, a celestial event tracking application. "
+            "You help users understand astronomy concepts, celestial events, space phenomena, and answer questions "
+            "about planets, stars, galaxies, and the universe. Be informative, engaging, and educational. "
+            "Keep responses concise but thorough (2-4 paragraphs maximum unless asked for more detail). "
+            "Use scientific accuracy while remaining accessible to general audiences."
+        )
 
         # Get conversation history from request (optional, for context)
         conversation_history = data.get("history", [])
@@ -570,6 +535,64 @@ def chatbot_api(request):
             "error": f"An error occurred: {str(e)}"
         }, status=500)
 
+
+def weather_api(request):
+    """
+    API endpoint to fetch weather forecast for a specific location.
+    Calculates 'current time' based on the location's UTC offset.
+    """
+    try:
+        lat = request.GET.get("lat", "38.8339")
+        lon = request.GET.get("lon", "-104.8214")
+
+        weather_forecast = []
+
+        # Fetch full data (includes 'hourly' and 'utc_offset_seconds')
+        data = fetch_weather_forecast(lat, lon)
+        raw_hourly = data.get('hourly', {})
+
+        if raw_hourly and 'time' in raw_hourly:
+            # 1. Get the offset for this location (e.g., -25200 seconds for MST)
+            utc_offset_sec = data.get('utc_offset_seconds', 0)
+
+            # 2. Calculate "Now" at that location
+            # Start with current UTC time -> Add the location's offset
+            now_utc = datetime.now(timezone.utc)
+            current_local_time = now_utc + timedelta(seconds=utc_offset_sec)
+
+            # 3. Format to match API string "YYYY-MM-DDTHH:00"
+            current_hour_str = current_local_time.strftime("%Y-%m-%dT%H:00")
+
+            times = raw_hourly.get('time', [])
+            covers = raw_hourly.get('cloud_cover', [])
+            visibilities = raw_hourly.get('visibility', [])
+            precips = raw_hourly.get('precipitation_probability', [])
+
+            for i, t in enumerate(times):
+                # Compare the Location's Local Time vs The Forecast Time
+                if t >= current_hour_str:
+                    weather_forecast.append({
+                        'time': t,
+                        'cloud_cover': covers[i] if i < len(covers) else 0,
+                        'visibility': visibilities[i] if i < len(visibilities) else 0,
+                        'precipitation_probability': precips[i] if i < len(precips) else 0,
+                    })
+                    if len(weather_forecast) >= 12:
+                        break
+
+        return JsonResponse({'forecast': weather_forecast})
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+def aurora_api(request):
+    """API endpoint to get current Aurora status."""
+    data = fetch_aurora_data()
+    if data:
+        return JsonResponse(data)
+    return JsonResponse({'error': 'Unavailable'}, status=503)
+
+
 @login_required
 def favorites(request):
     fav_images = Favorite.objects.filter(user=request.user)
@@ -596,7 +619,7 @@ def profile_view(request, username=None):
         user = request.user
 
     # Get or create profile
-    profile, created = UserProfile.objects.get_or_create(user=user)
+    profile, _ = UserProfile.objects.get_or_create(user=user)
 
     context = {
         'profile_user': user,
@@ -726,7 +749,6 @@ def upload_profile_picture(request):
 def api_celestial_bodies(request):
     latitude = request.GET.get("lat", 38.8339)
     longitude = request.GET.get("lon", -104.8214)
-    
     data = get_celestial_bodies_with_visibility(latitude, longitude)
     return JsonResponse({"bodies": data}, status=200)
 
@@ -747,7 +769,8 @@ def api_search_city(request):
                 "limit": 5,
                 "addressdetails": 1,
             },
-            headers={"User-Agent": "astral-app/1.0"}
+            headers={"User-Agent": "astral-app/1.0"},
+            timeout=10
         )
         data = resp.json()
 

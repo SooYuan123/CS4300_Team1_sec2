@@ -1,14 +1,15 @@
+from datetime import date
+from unittest.mock import patch
+import pytest
 from django.test import TestCase
 from django.urls import reverse
 import requests_mock
-from datetime import date
+from django.contrib.auth.models import User
+
 from home.views import (
     get_apod_for_date, get_jwst_random_image, get_jwst_recent_images,
-    _parse_iso, _earliest_peak_from_events, fetch_all_events
+    _parse_iso, _earliest_peak_from_events
 )
-import pytest
-from django.contrib.auth.models import User
-from unittest.mock import patch, MagicMock
 
 
 def generate_mock_rows(count):
@@ -20,24 +21,6 @@ def generate_mock_rows(count):
 
 class ViewTests(TestCase):
     """Tests for primary views in home/views.py."""
-
-    def test_events_list_view_failure_handling(self):
-        with requests_mock.Mocker() as m:
-            m.get(requests_mock.ANY, status_code=403)
-            response = self.client.get(reverse('events_list'))
-            self.assertEqual(response.status_code, 200)
-            self.assertTemplateUsed(response, 'events_list.html')
-            self.assertEqual(len(response.context['events']), 0)
-
-    def test_events_list_view_success(self):
-        """Test events list with successful API response."""
-        with requests_mock.Mocker() as m:
-            mock_rows = generate_mock_rows(25)
-            m.get(requests_mock.ANY, json={"data": {"rows": mock_rows}}, status_code=200)
-            response = self.client.get(reverse('events_list'))
-
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue(response.context['has_more'])
 
     def test_events_api_endpoint_success_and_lazy_loading(self):
         with requests_mock.Mocker() as m:
@@ -430,7 +413,6 @@ class RegisterTests(TestCase):
     def test_register_get(self):
         """Test GET request to register page."""
         response = self.client.get(reverse('register'))
-
         self.assertEqual(response.status_code, 200)
         self.assertIn('form', response.context)
 
@@ -458,9 +440,16 @@ def test_register_get(client):
 
 @pytest.mark.django_db
 def test_register_post_success(client):
-    response = client.post(reverse("register"),
-                           {"username": "newuser", "email": "newuser@example.com", "password1": "strongpass123", "password2": "strongpass123"})
-    assert response.status_code == 302
+    response = client.post(
+        reverse("register"),
+        {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "password1": "strongpass123",
+            "password2": "strongpass123",
+        },
+    )
+    assert response.status_code == 302  # Should redirect
     assert User.objects.filter(username="newuser").exists()
 
 

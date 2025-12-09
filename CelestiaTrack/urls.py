@@ -16,19 +16,23 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import path, include
+from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
 from home import views
 from home.views import (
-    index, 
-    events_list, 
-    events_api, 
-    api_celestial_bodies,  
-    register, gallery, 
-    toggle_favorite, 
+    index,
+    events_list,
+    events_api,
+    api_celestial_bodies,
+    register,
+    gallery,
+    toggle_favorite,
     toggle_event_favorite,
-    favorites,)
+    favorites,
+    weather_api,
+    aurora_api,
+)
 
 
 urlpatterns = [
@@ -39,10 +43,10 @@ urlpatterns = [
     path('events/', events_list, name="events_list"),
 
     path('api/events/', events_api, name='events_api'),
+    path('api/weather/', weather_api, name='weather_api'),
     path("api/celestial/", api_celestial_bodies),
     path("api/celestial-bodies/", views.api_celestial_bodies, name="celestial_bodies"),
     path("api/search-city/", views.api_search_city, name="api_search_city"),
-
 
     path('gallery/', gallery, name='gallery'),
     path('toggle-favorite/', toggle_favorite, name='toggle_favorite'),
@@ -50,13 +54,18 @@ urlpatterns = [
     path('favorites/', favorites, name='favorites'),
     path('api/chatbot/', views.chatbot_api, name='chatbot_api'),
     path('admin/', admin.site.urls),
+
     # Profile URLs
     path('profile/edit/', views.profile_edit, name='profile_edit'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
     path('api/upload-profile-picture/', views.upload_profile_picture, name='upload_profile_picture'),
+
+    # Aurora API
+    path('api/aurora/', aurora_api, name='aurora_api'),
 ]
 
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

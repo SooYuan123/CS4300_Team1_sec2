@@ -1,8 +1,8 @@
+from datetime import datetime
+
 import pytest
 import requests
 import requests_mock
-from datetime import datetime, timezone
-from django.conf import settings
 from home import utils
 
 
@@ -235,14 +235,10 @@ def test_fetch_celestial_body_positions_error(settings):
 # -------------------------------------------------------------------
 
 @pytest.mark.django_db
-def test_calculate_next_visibility_sun_success(monkeypatch):
-    # Provide rise-set mock rows
-    monkeypatch.setattr(utils, "fetch_rise_set_times", lambda *a, **k: [{
-        "rise": {"date": "2999-01-01T06:00:00+00:00"}
-    }])
+def test_calculate_next_visibility_sun_success(monkeypatch):  # pylint: disable=unused-argument
     dt = utils.calculate_next_visibility("sun")
     assert isinstance(dt, datetime)
 
 
 def test_calculate_next_visibility_invalid_body():
-    assert utils.calculate_next_visibility("mars") is None
+    assert utils.calculate_next_visibility("fake_planet") is None

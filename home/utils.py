@@ -1,10 +1,14 @@
+
 import os
 import base64
-import requests
 from datetime import datetime, timedelta, timezone
+
+import requests
+import ephem
 from requests.exceptions import HTTPError, RequestException
-from django.conf import settings
 from dotenv import load_dotenv
+from django.conf import settings
+
 
 load_dotenv()
 
@@ -162,9 +166,12 @@ def fetch_rise_set_times(body, latitude, longitude, from_date=None, to_date=None
                     event = {
                         "date": date_key,
                         "body": {"name": body.capitalize()},
-                        "rise": {"date": body_data.get("rise", {}).get("utc")} if "rise" in body_data else None,
-                        "transit": {"date": body_data.get("transit", {}).get("utc")} if "transit" in body_data else None,
-                        "set": {"date": body_data.get("set", {}).get("utc")} if "set" in body_data else None,
+                        "rise": {"date": body_data.get("rise", {}).get("utc")}
+                        if "rise" in body_data else None,
+                        "transit": {"date": body_data.get("transit", {}).get("utc")}
+                        if "transit" in body_data else None,
+                        "set": {"date": body_data.get("set", {}).get("utc")}
+                        if "set" in body_data else None,
                         "events": [
                             {
                                 "type": "rise-set",
@@ -230,7 +237,6 @@ def fetch_body_position(body, date_time, latitude, longitude):
         print(f"Error fetching position for {body}: {e}")
         return None
 
-
 def fetch_moon_phase(date_time, latitude, longitude):
     """
     Fetch moon phase information from Radiant Drift API.
@@ -288,11 +294,10 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
         print(f"Error fetching solar eclipse data: {e}")
         return []
 
-
 # -------------------------
 # Open-Meteo – twilight events
 # -------------------------
-def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
+def fetch_twilight_events(latitude, longitude, _from_date=None, _to_date=None):
     """
     Open-Meteo: returns list of sunrise/sunset events; logs and returns [] on error.
 
@@ -318,7 +323,7 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
         sunsets = daily.get("sunset", []) or []
 
         events = []
-        for i, date_str in enumerate(dates):
+        for i, _date_str in enumerate(dates):
             # Sunrise
             if i < len(sunrises) and sunrises[i]:
                 events.append({
@@ -360,9 +365,132 @@ def fetch_twilight_events(latitude, longitude, from_date=None, to_date=None):
         print(f"Error fetching twilight events: {e}")
         return []
 
+
+def fetch_weather_forecast(latitude, longitude):
+    """
+    Fetch cloud cover and visibility data from Open-Meteo.
+    """
+    try:
+        params = {
+            "latitude": float(latitude),
+            "longitude": float(longitude),
+            "hourly": "cloud_cover,visibility,precipitation_probability",
+            "timezone": "auto",
+        }
+
+        # Re-use the existing OPEN_METEO_API_BASE
+        r = requests.get(OPEN_METEO_API_BASE, params=params, timeout=10)
+        r.raise_for_status()
+        # Return the whole dictionary
+        return r.json()
+    except Exception as e:
+        print(f"Error fetching weather forecast: {e}")
+        return {}
+
+# -------------------------
+# AMS Meteors – showers + fireballs (optional)
+# -------------------------
+
+
+def fetch_meteor_shower_events(from_date=None, to_date=None, api_key=None):
+    """AMS meteors (optional): returns list; [] if no key or error."""
+    if not api_key:
+        print("AMS Meteors API key not provided, skipping meteor shower data")
+        return []
+    try:
+        today = datetime.now(timezone.utc).date()
+        to_date = to_date or (today + timedelta(days=1095))
+        from_date = from_date or (today - timedelta(days=365))
+
+        params = {
+            "api_key": api_key,
+            "start_date": str(from_date),
+            "end_date": str(to_date),
+        }
+        r = requests.get(f"{AMS_METEORS_API_BASE}/get_events", params=params, timeout=15)
+        r.raise_for_status()
+        data = r.json() or {}
+
+        events = []
+        if data.get("status") == 200:
+            for ev in data.get("result", []) or []:
+                events.append({
+                    "body": "Meteor Shower",
+                    "type": ev.get("name", "Meteor Shower"),
+                    "peak": ev.get("peak_date"),
+                    "rise": None,
+                    "set": None,
+                    "obscuration": None,
+                    "highlights": {
+                        "source": "ams_meteors",
+                        "category": "meteor_shower",
+                        "description": ev.get("description", ""),
+                        "meteor_count": ev.get("meteor_count", "Unknown"),
+                        "visibility": ev.get("visibility", "Unknown"),
+                    },
+                })
+        return events
+    except Exception as e:
+        print(f"Error fetching meteor shower events: {e}")
+        return []
+
+
+def fetch_fireball_events(
+    from_date=None,
+    to_date=None,
+    api_key=None,
+    latitude=None,
+    longitude=None,
+):  # pylint: disable=unused-argument
+    """AMS fireballs (optional): returns list; [] if no key or error."""
+    if not api_key:
+        print("AMS Meteors API key not provided, skipping fireball data")
+        return []
+    try:
+        today = datetime.now(timezone.utc).date()
+        to_date = to_date or (today + timedelta(days=1095))
+        from_date = from_date or (today - timedelta(days=365))
+
+        params = {
+            "api_key": api_key,
+            "start_date": str(from_date),
+            "end_date": str(to_date),
+            "pending_only": 0,
+        }
+        r = requests.get(f"{AMS_METEORS_API_BASE}/get_close_reports", params=params, timeout=15)
+        r.raise_for_status()
+        data = r.json() or {}
+
+        events = []
+        if data.get("status") == 200:
+            for rep in data.get("result", []) or []:
+                events.append({
+                    "body": "Fireball",
+                    "type": "Fireball Sighting",
+                    "peak": rep.get("date"),
+                    "rise": None,
+                    "set": None,
+                    "obscuration": None,
+                    "highlights": {
+                        "source": "ams_meteors",
+                        "category": "fireball",
+                        "description": "Fireball sighting reported",
+                        "location": f"{rep.get('city', 'Unknown')}, {rep.get('state', 'Unknown')}",
+                        "brightness": rep.get("brightness", "Unknown"),
+                        "trajectory": rep.get("trajectory", "Unknown"),
+                    },
+                })
+        return events
+    except Exception as e:
+        print(f"Error fetching fireball events: {e}")
+        return []
+
+
 # -------------------------
 # Solar System OpenData + visibility helpers
 # -------------------------
+
+
 def fetch_celestial_body_positions():
     """Fetch celestial body data from Solar System OpenData API."""
     celestial_bodies = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune"]
@@ -408,35 +536,55 @@ def fetch_celestial_body_positions():
 
 def calculate_next_visibility(body_name, latitude=38.8339, longitude=-104.8214):
     """
-    Calculate when a celestial body will next be visible.
-    Uses Radiant Drift for sun/moon, simplified logic for planets.
-
-    Default Location: Colorado Springs, CO (38.8339°N, -104.8214°W)
+    Calculate the next rising time for a celestial body using PyEphem.
+    This works locally and does not require an API key.
     """
-    body_lower = body_name.lower()
-
     try:
-        # For sun and moon, use Radiant Drift API
-        if body_lower in ["sun", "moon"]:
-            rows = fetch_rise_set_times(body_lower, latitude, longitude)
-            if not rows:
-                return None
+        # 1. Setup Observer (The Viewer)
+        observer = ephem.Observer()
+        observer.lat = str(latitude)
+        observer.lon = str(longitude)
+        observer.elevation = 1800  # Approx elevation for Colorado Springs (meters)
 
-            now = datetime.now(timezone.utc)
+        # Set current time (UTC)
+        observer.date = datetime.now(timezone.utc)
 
-            for row in rows:
-                rise_time = row.get("rise", {})
-                if rise_time and rise_time.get("date"):
-                    rise_date_str = rise_time.get("date")
-                    try:
-                        rise_date = datetime.fromisoformat(rise_date_str.replace("Z", "+00:00"))
-                        if rise_date > now:
-                            return rise_date
-                    except Exception:
-                        continue
+        # 2. Map body name to Ephem object
+        body_map = {
+            'sun': ephem.Sun(),
+            'moon': ephem.Moon(),
+            'mercury': ephem.Mercury(),
+            'venus': ephem.Venus(),
+            'mars': ephem.Mars(),
+            'jupiter': ephem.Jupiter(),
+            'saturn': ephem.Saturn(),
+            'uranus': ephem.Uranus(),
+            'neptune': ephem.Neptune(),
+            'pluto': ephem.Pluto()
+        }
+
+        target_body = body_map.get(body_name.lower())
+
+        if not target_body:
             return None
-        else:
-            # For planets, we can't get precise visibility from available APIs
+
+        # 3. Calculate next rising time
+        # next_rising returns an ephem Date object
+        try:
+            rise_time_ephem = observer.next_rising(target_body)
+
+            # Convert ephem date to Python datetime
+            rise_dt = rise_time_ephem.datetime()
+
+            # Add UTC timezone info (ephem uses UTC by default)
+            rise_dt = rise_dt.replace(tzinfo=timezone.utc)
+
+            return rise_dt
+        except ephem.AlwaysUpError:
+            # Body is circumpolar (always visible, like stars near the pole)
+            return datetime.now(timezone.utc)
+        except ephem.NeverUpError:
+            # Body is never visible (below horizon for this latitude)
             return None
 
     except Exception as e:
@@ -463,3 +611,44 @@ def get_celestial_bodies_with_visibility(latitude=38.8339, longitude=-104.8214):
     positions.sort(key=lambda x: x["nextVisible"] or datetime.max.replace(tzinfo=None))
 
     return positions
+
+
+def fetch_aurora_data():
+    """
+    Fetches the Planetary K-index from NOAA SWPC.
+    Returns the latest K-index (0-9) and a status string.
+    """
+    try:
+        # NOAA's 1-minute K-index JSON
+        url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
+        response = requests.get(url, timeout=3)
+        response.raise_for_status()
+
+        data = response.json()
+        # Data format is a list of lists. First is header. Last is most recent.
+        # [time, kp, a_running, station_count]
+        if len(data) > 1:
+            latest = data[-1]
+            kp_index = float(latest[1])
+
+            # Determine status
+            if kp_index >= 5:
+                status = "High (Storm)"
+                color = "danger"
+            elif kp_index >= 4:
+                status = "Moderate"
+                color = "warning"
+            else:
+                status = "Low"
+                color = "success"
+
+            return {
+                "kp_index": kp_index,
+                "status": status,
+                "color": color,
+                "timestamp": latest[0]
+            }
+    except Exception as e:
+        print(f"Error fetching Aurora data: {e}")
+
+    return None

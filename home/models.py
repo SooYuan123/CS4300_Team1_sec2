@@ -3,7 +3,8 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-""" cache API data """
+
+# cache API data
 class AstronomicalEvent(models.Model):
     body_name = models.CharField(max_length=50)
     event_type = models.CharField(max_length=100)
@@ -33,7 +34,7 @@ class Favorite(models.Model):
 
 class EventFavorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    event_id = models.CharField(max_length=255, default="", blank=True) 
+    event_id = models.CharField(max_length=255, default="", blank=True)
     body = models.CharField(max_length=100)
     type = models.CharField(max_length=100)
     peak = models.CharField(max_length=100, blank=True)
@@ -44,7 +45,6 @@ class EventFavorite(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.event_id}"
-
 
 
 class UserProfile(models.Model):
@@ -96,19 +96,17 @@ class UserProfile(models.Model):
         return f'https://ui-avatars.com/api/?name={self.user.username}&size=200&background=random'
 
 
-# Signal to automatically create UserProfile when User is created
 @receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    """Create a UserProfile whenever a new User is created"""
+def create_user_profile(sender, instance, created, **kwargs):  # pylint: disable=unused-argument
+    """Create a UserProfile whenever a new User is created."""
     if created:
         UserProfile.objects.create(user=instance)
 
 
 @receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    """Save the UserProfile whenever the User is saved"""
-    if hasattr(instance, 'profile'):
+def save_user_profile(sender, instance, **kwargs):  # pylint: disable=unused-argument
+    """Save the UserProfile whenever the User is saved."""
+    if hasattr(instance, "profile"):
         instance.profile.save()
     else:
-        # Create profile if it doesn't exist
         UserProfile.objects.create(user=instance)

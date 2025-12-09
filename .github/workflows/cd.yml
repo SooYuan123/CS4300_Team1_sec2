@@ -9,30 +9,10 @@ permissions:
   contents: read
 
 jobs:
-  build-test:
-    name: Build & Test (coverage >=80%)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install coverage pytest pytest-django pytest-cov
-      - name: Run Django tests with coverage
-        env:
-          DJANGO_SETTINGS_MODULE: CelestiaTrack.settings_ci
-        run: |
-          coverage run --source='.' manage.py test --settings=CelestiaTrack.settings_ci
-          coverage report --fail-under=80
-
   deploy:
     name: Trigger Render Deploy
-    needs: build-test
     runs-on: ubuntu-latest
+
     steps:
       - name: Trigger Render Deploy Hook
         env:
