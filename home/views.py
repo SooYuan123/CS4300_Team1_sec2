@@ -611,23 +611,6 @@ def aurora_api(request):
         return JsonResponse(data)
     return JsonResponse({'error': 'Unavailable'}, status=503)
 
-def moon_phase_api(request):
-    """API to calculate moon phase instantly using Ephem."""
-    try:
-        # We can calculate this locally without external API calls
-        data = fetch_moon_phase()
-        return JsonResponse(data)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-def solar_eclipses_api(request):
-    """API to fetch solar eclipses (This is the slow one, so we move it to API)."""
-    try:
-        data = fetch_solar_eclipse_data()
-        return JsonResponse({'eclipses': data})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
 
 @login_required
 def favorites(request):
