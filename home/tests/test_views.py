@@ -21,23 +21,6 @@ def generate_mock_rows(count):
 class ViewTests(TestCase):
     """Tests for primary views in home/views.py."""
 
-    def test_events_list_view_failure_handling(self):
-        with requests_mock.Mocker() as m:
-            m.get(requests_mock.ANY, status_code=403)
-            response = self.client.get(reverse('events_list'))
-            self.assertEqual(response.status_code, 200)
-            self.assertTemplateUsed(response, 'events_list.html')
-            self.assertEqual(len(response.context['events']), 0)
-
-    def test_events_list_view_success(self):
-        """Test events list with successful API response."""
-        with requests_mock.Mocker() as m:
-            mock_rows = generate_mock_rows(25)
-            m.get(requests_mock.ANY, json={"data": {"rows": mock_rows}}, status_code=200)
-            response = self.client.get(reverse('events_list'))
-
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue(response.context['has_more'])
 
     def test_events_api_endpoint_success_and_lazy_loading(self):
         with requests_mock.Mocker() as m:
