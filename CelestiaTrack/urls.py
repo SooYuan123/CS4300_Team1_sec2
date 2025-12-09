@@ -31,6 +31,7 @@ from home.views import (
     toggle_event_favorite,
     favorites,
     weather_api,
+    aurora_api,
 )
 
 
@@ -58,6 +59,7 @@ urlpatterns = [
     path('profile/edit/', views.profile_edit, name='profile_edit'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
+    path('api/aurora/', aurora_api, name='aurora_api'),
 ]
 
 # Serve media files in development

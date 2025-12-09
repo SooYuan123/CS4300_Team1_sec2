@@ -23,6 +23,7 @@ from .utils import (
     fetch_fireball_events,
     get_celestial_bodies_with_visibility,
     fetch_weather_forecast,
+    fetch_aurora_data,
 )
 
 load_dotenv()
@@ -273,8 +274,6 @@ def _parse_iso(dt_str: str):
 # -------------------------
 # Index (html-images feature: JWST/NASA)
 # -------------------------
-
-
 def get_jwst_random_image():
     """Fetch a deterministic 'random' JWST image (one per day)."""
     jwst_url = "https://api.jwstapi.com/all/type/jpg?page=1&perPage=30"
@@ -604,6 +603,13 @@ def weather_api(request):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+def aurora_api(request):
+    """API endpoint to get current Aurora status."""
+    data = fetch_aurora_data()
+    if data:
+        return JsonResponse(data)
+    return JsonResponse({'error': 'Unavailable'}, status=503)
 
 
 @login_required

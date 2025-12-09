@@ -120,7 +120,32 @@
       <button class="btn btn-outline-danger btn-sm ms-2" onclick="retryLoad()">Retry</button>
     </div>
 
-    <hr class="my-5 border-info" style="opacity: 0.3;">
+    <hr class="my-5 border-secondary">
+
+    <h1 class="text-center mb-5 text-glow" style="font-family: 'Orbitron', sans-serif; font-size: 3.5rem;">
+      <i class="bi bi-activity"></i> Aurora Forecast
+    </h1>
+    <p class="text-center mb-4" style="color: #d2af26; text-shadow: 0 0 6px #171819;">
+      <i class="bi bi-info-circle"></i> Real-time Geomagnetic Activity (Kp Index) by NOAA
+    </p>
+
+    <div class="row justify-content-center mb-5">
+      <div class="col-md-6 col-lg-4">
+        <div class="card bg-dark border-secondary shadow-lg">
+          <div class="card-body text-center" id="aurora-container">
+            <div class="spinner-border text-info" role="status"></div>
+            <p class="mt-2">Checking solar activity...</p>
+          </div>
+          <div class="card-footer bg-transparent border-secondary">
+             <p id="aurora-explanation" class="small text-light mb-0">
+               Loading impact data...
+             </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-5 border-secondary">
 
     <div class="mb-5 pb-5">
       <h1 class="text-center mb-5 text-glow" style="font-family: 'Orbitron', sans-serif; font-size: 3.5rem;">
@@ -243,7 +268,7 @@
         }
 
         // Logic for Progress Bar Color
-        let barClass = 'bg-secondary';
+        let barClass = 'bg-danger'; // Default to Red (Poor) for high cloud cover
         if (hour.cloud_cover < 20) barClass = 'bg-success';
         else if (hour.cloud_cover < 50) barClass = 'bg-warning';
 
@@ -364,6 +389,46 @@
 
     function retryLoad(){ retryCount = 0; loadMoreEvents(); }
 
+    function loadAurora() {
+      // 1. Definition of Kp Impacts
+      function getKpExplanation(kp) {
+        if (kp >= 6) return "<strong>EXTREME STORM:</strong> Visible as far south as Utah/Colorado. Photography excellent.";
+        if (kp >= 5) return "<strong>STORM LEVEL:</strong> Aurora likely in northern states (WA, MI, NY). Good visibility.";
+        if (kp >= 4) return "<strong>ACTIVE:</strong> Visible in Canada and Alaska. Faint glow possible on northern horizon in US.";
+        if (kp >= 3) return "<strong>UNSETTLED:</strong> Visible only in high latitudes. minimal chance in US.";
+        return "<strong>QUIET:</strong> No significant activity. Aurora only visible in the Arctic circle.";
+      }
+
+      fetch('/api/aurora/')
+        .then(r => r.json())
+        .then(data => {
+          const container = document.getElementById('aurora-container');
+          const explanation = document.getElementById('aurora-explanation');
+
+          if (data.error) {
+             container.innerHTML = '<p class="text-light">Data Unavailable</p>';
+             explanation.textContent = "Could not connect to NOAA.";
+             return;
+          }
+
+          const percentage = (data.kp_index / 9) * 100;
+          const explainText = getKpExplanation(data.kp_index);
+
+          container.innerHTML = `
+            <h1 class="display-4 fw-bold text-${data.color}">${data.kp_index}</h1>
+            <p class="lead text-light">Status: <span class="text-${data.color} fw-bold">${data.status}</span></p>
+            <div class="progress bg-secondary" style="height: 10px;">
+              <div class="progress-bar bg-${data.color}" role="progressbar" style="width: ${percentage}%"></div>
+            </div>
+            <small class="text-light mt-2 d-block">Updated: ${data.timestamp.slice(11,16)} UTC</small>
+          `;
+
+          // 2. Inject the explanation
+          explanation.innerHTML = explainText;
+        })
+        .catch(err => console.error('Aurora error:', err));
+    }
+
     window.addEventListener('scroll', () => {
       if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 200)) {
         loadMoreEvents();
@@ -462,6 +527,7 @@
     loadWeatherForecast()
     loadMoonPhase()
     loadSolarEclipses()
+    loadAurora()
 })
 ;
   </script>

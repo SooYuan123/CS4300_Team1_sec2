@@ -238,7 +238,6 @@ def fetch_body_position(body, date_time, latitude, longitude):
         print(f"Error fetching position for {body}: {e}")
         return None
 
-
 def fetch_moon_phase(date_time, latitude, longitude):
     """
     Fetch moon phase information from Radiant Drift API.
@@ -295,7 +294,6 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
     except Exception as e:
         print(f"Error fetching solar eclipse data: {e}")
         return []
-
 
 # -------------------------
 # Open-Meteo – twilight events
@@ -612,3 +610,44 @@ def get_celestial_bodies_with_visibility(latitude=38.8339, longitude=-104.8214):
     positions.sort(key=lambda x: x["nextVisible"] or datetime.max.replace(tzinfo=None))
 
     return positions
+
+
+def fetch_aurora_data():
+    """
+    Fetches the Planetary K-index from NOAA SWPC.
+    Returns the latest K-index (0-9) and a status string.
+    """
+    try:
+        # NOAA's 1-minute K-index JSON
+        url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
+        response = requests.get(url, timeout=3)
+        response.raise_for_status()
+
+        data = response.json()
+        # Data format is a list of lists. First is header. Last is most recent.
+        # [time, kp, a_running, station_count]
+        if len(data) > 1:
+            latest = data[-1]
+            kp_index = float(latest[1])
+
+            # Determine status
+            if kp_index >= 5:
+                status = "High (Storm)"
+                color = "danger"
+            elif kp_index >= 4:
+                status = "Moderate"
+                color = "warning"
+            else:
+                status = "Low"
+                color = "success"
+
+            return {
+                "kp_index": kp_index,
+                "status": status,
+                "color": color,
+                "timestamp": latest[0]
+            }
+    except Exception as e:
+        print(f"Error fetching Aurora data: {e}")
+
+    return None
