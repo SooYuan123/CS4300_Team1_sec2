@@ -1,4 +1,4 @@
-
+from django.core.cache import cache
 import os
 import base64
 from datetime import datetime, timedelta, timezone
@@ -621,7 +621,7 @@ def fetch_aurora_data():
     try:
         # NOAA's 1-minute K-index JSON
         url = "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"
-        response = requests.get(url, timeout=3)
+        response = requests.get(url, timeout=5)
         response.raise_for_status()
 
         data = response.json()
