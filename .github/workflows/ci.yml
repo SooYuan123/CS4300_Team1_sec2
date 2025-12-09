@@ -56,7 +56,7 @@ jobs:
           coverage report --fail-under=${COVERAGE_THRESHOLD:-80}
 
       - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-report
           path: |
@@ -238,7 +238,7 @@ jobs:
 
       - name: Upload lint reports
         if: always()  # Upload reports even if previous steps failed
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lint-reports
           path: |
