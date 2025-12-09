@@ -1,9 +1,9 @@
 import os
 import json
-from django.core.cache import cache
 import base64
 from datetime import date, datetime, timezone, timedelta
 from io import BytesIO
+from django.core.cache import cache
 
 import requests
 from openai import OpenAI
