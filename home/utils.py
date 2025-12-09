@@ -1,4 +1,3 @@
-from django.core.cache import cache
 import os
 import base64
 from datetime import datetime, timedelta, timezone
@@ -17,6 +16,8 @@ load_dotenv()
 # -------------------------
 ASTRONOMY_API_BASE = "https://api.astronomyapi.com/api/v2/bodies/events"
 OPEN_METEO_API_BASE = "https://api.open-meteo.com/v1/forecast"
+AMS_METEORS_API_BASE = "https://api.amsmeteors.org/api/v1"
+
 
 # Radiant Drift API
 RADIANT_DRIFT_API_BASE = "https://api.radiantdrift.com"
@@ -237,6 +238,7 @@ def fetch_body_position(body, date_time, latitude, longitude):
         print(f"Error fetching position for {body}: {e}")
         return None
 
+
 def fetch_moon_phase(date_time, latitude, longitude):
     """
     Fetch moon phase information from Radiant Drift API.
@@ -297,6 +299,8 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
 # -------------------------
 # Open-Meteo – twilight events
 # -------------------------
+
+
 def fetch_twilight_events(latitude, longitude, _from_date=None, _to_date=None):
     """
     Open-Meteo: returns list of sunrise/sunset events; logs and returns [] on error.

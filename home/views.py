@@ -16,7 +16,6 @@ from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.conf import settings
 from django import forms
 from django.views.decorators.http import require_http_methods, require_GET
 
@@ -251,6 +250,7 @@ def _parse_iso(dt_str: str):
         return dt
     except Exception:
         return None
+
 
 # -------------------------
 # Index (html-images feature: JWST/NASA)
@@ -585,6 +585,7 @@ def weather_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
 def aurora_api(request):
     """API endpoint to get current Aurora status."""
     data = fetch_aurora_data()
@@ -666,83 +667,83 @@ def upload_profile_picture(request):
     """Handle profile picture upload via AJAX with cropping support."""
     if request.method != 'POST':
         return JsonResponse({"error": "Only POST requests allowed"}, status=405)
-    
+
     try:
-        # Get the uploaded image
+        #  Get the uploaded image
         if 'image' not in request.FILES and 'cropped_image' not in request.POST:
             return JsonResponse({"error": "No image provided"}, status=400)
-        
-        # Handle cropped image (base64 encoded from client-side cropping)
+
+        #  Handle cropped image (base64 encoded from client-side cropping)
         if 'cropped_image' in request.POST:
             cropped_data = request.POST.get('cropped_image')
             if cropped_data.startswith('data:image'):
-                # Remove data URL prefix
+                #  Remove data URL prefix
                 cropped_data = cropped_data.split(',')[1]
-            
-            # Decode base64 image
+
+            #  Decode base64 image
             image_data = base64.b64decode(cropped_data)
             image = Image.open(BytesIO(image_data))
         else:
-            # Handle regular file upload
+            #  Handle regular file upload
             uploaded_file = request.FILES['image']
             image = Image.open(uploaded_file)
-        
-        # Validate minimum dimensions
+
+        #  Validate minimum dimensions
         width, height = image.size
         if width < 200 or height < 200:
             return JsonResponse({
                 "error": f"Image must be at least 200x200 pixels. Your image is {width}x{height} pixels."
             }, status=400)
-        
-        # Ensure square format (crop to square if needed)
+
+        #  Ensure square format (crop to square if needed)
         if width != height:
-            # Crop to square from center
+            #  Crop to square from center
             size = min(width, height)
             left = (width - size) // 2
             top = (height - size) // 2
             right = left + size
             bottom = top + size
             image = image.crop((left, top, right, bottom))
-        
-        # Resize to ensure minimum 200x200 (but keep square)
+
+        #  Resize to ensure minimum 200x200 (but keep square)
         if image.size[0] < 200:
             image = image.resize((200, 200), Image.Resampling.LANCZOS)
-        
-        # Convert to RGB if necessary (for JPEG compatibility)
+
+        #  Convert to RGB if necessary (for JPEG compatibility)
         if image.mode in ('RGBA', 'LA', 'P'):
-            # Create white background
+            #  Create white background
             rgb_image = Image.new('RGB', image.size, (255, 255, 255))
             if image.mode == 'P':
                 image = image.convert('RGBA')
             rgb_image.paste(image, mask=image.split()[-1] if image.mode in ('RGBA', 'LA') else None)
             image = rgb_image
-        
-        # Save to BytesIO
+
+        #  Save to BytesIO
         output = BytesIO()
         image.save(output, format='JPEG', quality=85)
         output.seek(0)
-        
-        # Get or create user profile
-        profile, created = UserProfile.objects.get_or_create(user=request.user)
-        
-        # Save the image
+
+        #  Get or create user profile
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+        #  Save the image
         from django.core.files.base import ContentFile
         filename = f"profile_{request.user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
         profile.profile_picture.save(filename, ContentFile(output.read()), save=True)
-        
-        # Debug logging
+
+        #  Debug logging
         print("=== PROFILE PIC DEBUG ===")
         print("Saved file path:", profile.profile_picture.path)
         print("Saved file exists on disk:", os.path.exists(profile.profile_picture.path))
         print("Served URL:", profile.profile_picture.url)
         print("==========================")
-        
+
         return JsonResponse({
             "success": True,
             "message": "Profile picture uploaded successfully",
             "image_url": profile.profile_picture.url
         })
-        
+
     except Exception as e:
         import traceback
         print(f"Error uploading profile picture: {e}")
