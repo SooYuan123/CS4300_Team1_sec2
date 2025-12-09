@@ -16,7 +16,8 @@ load_dotenv()
 # -------------------------
 ASTRONOMY_API_BASE = "https://api.astronomyapi.com/api/v2/bodies/events"
 OPEN_METEO_API_BASE = "https://api.open-meteo.com/v1/forecast"
-AMS_METEORS_API_BASE = "https://www.amsmeteors.org/members/api/open_api"
+AMS_METEORS_API_BASE = "https://api.amsmeteors.org/api/v1"
+
 
 # Radiant Drift API
 RADIANT_DRIFT_API_BASE = "https://api.radiantdrift.com"
@@ -299,6 +300,8 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
 # -------------------------
 # Open-Meteo – twilight events
 # -------------------------
+
+
 def fetch_twilight_events(latitude, longitude, _from_date=None, _to_date=None):
     """
     Open-Meteo: returns list of sunrise/sunset events; logs and returns [] on error.
@@ -491,6 +494,8 @@ def fetch_fireball_events(
 # -------------------------
 # Solar System OpenData + visibility helpers
 # -------------------------
+
+
 def fetch_celestial_body_positions():
     """Fetch celestial body data from Solar System OpenData API."""
     celestial_bodies = ["sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune"]
