@@ -730,6 +730,13 @@ def upload_profile_picture(request):
         filename = f"profile_{request.user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
         profile.profile_picture.save(filename, ContentFile(output.read()), save=True)
         
+        # Debug logging
+        print("=== PROFILE PIC DEBUG ===")
+        print("Saved file path:", profile.profile_picture.path)
+        print("Saved file exists on disk:", os.path.exists(profile.profile_picture.path))
+        print("Served URL:", profile.profile_picture.url)
+        print("==========================")
+        
         return JsonResponse({
             "success": True,
             "message": "Profile picture uploaded successfully",
