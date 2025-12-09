@@ -16,9 +16,9 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.urls import path
+from django.urls import path, re_path
 from django.conf import settings
-from django.conf.urls.static import static
+from django.views.static import serve
 from home import views
 from home.views import (
     index,
@@ -48,20 +48,24 @@ urlpatterns = [
     path("api/celestial-bodies/", views.api_celestial_bodies, name="celestial_bodies"),
     path("api/search-city/", views.api_search_city, name="api_search_city"),
 
-
     path('gallery/', gallery, name='gallery'),
     path('toggle-favorite/', toggle_favorite, name='toggle_favorite'),
     path('toggle_event_favorite/', toggle_event_favorite, name='toggle_event_favorite'),
     path('favorites/', favorites, name='favorites'),
     path('api/chatbot/', views.chatbot_api, name='chatbot_api'),
     path('admin/', admin.site.urls),
+
     # Profile URLs
     path('profile/edit/', views.profile_edit, name='profile_edit'),
     path('profile/', views.profile_view, name='profile'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
+    path('api/upload-profile-picture/', views.upload_profile_picture, name='upload_profile_picture'),
+
+    # Aurora API
     path('api/aurora/', aurora_api, name='aurora_api'),
 ]
 
-# Serve media files in development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files in all environments (Render included)
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]

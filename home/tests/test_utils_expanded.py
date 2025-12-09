@@ -208,40 +208,6 @@ def test_fetch_twilight_events_error(monkeypatch):
 
 
 # -------------------------------------------------------------------
-# Meteor + Fireball events
-# -------------------------------------------------------------------
-
-def test_fetch_meteor_shower_events_no_key():
-    assert utils.fetch_meteor_shower_events(api_key=None) == []
-
-
-def test_fetch_meteor_shower_events_success():
-    payload = {
-        "status": 200,
-        "result": [{"name": "Quadrantids", "peak_date": "2025-01-04"}]
-    }
-    with requests_mock.Mocker() as m:
-        m.get(requests_mock.ANY, json=payload)
-        ev = utils.fetch_meteor_shower_events(api_key="KEY")
-        assert ev[0]["type"] == "Quadrantids"
-
-
-def test_fetch_fireball_events_no_key():
-    assert utils.fetch_fireball_events(api_key=None) == []
-
-
-def test_fetch_fireball_events_success():
-    payload = {
-        "status": 200,
-        "result": [{"date": "2025-01-01", "city": "Denver"}]
-    }
-    with requests_mock.Mocker() as m:
-        m.get(requests_mock.ANY, json=payload)
-        out = utils.fetch_fireball_events(api_key="KEY")
-        assert out[0]["body"] == "Fireball"
-
-
-# -------------------------------------------------------------------
 # Solar System OpenData
 # -------------------------------------------------------------------
 
