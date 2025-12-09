@@ -13,10 +13,6 @@ from pathlib import Path
 from decouple import config
 import dj_database_url
 import os
-# Cloudinary Configuration for Production
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -124,7 +120,7 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'home/static')
 
 # for localhost testing
-#STATIC_ROOT = os.path.join(BASE_DIR, 'home/static/')
+# STATIC_ROOT = os.path.join(BASE_DIR, 'home/static/')
 
 # IMPORTANT: do not set STATICFILES_DIRS for an app's own static folder.
 # Django will auto-discover home/static/**

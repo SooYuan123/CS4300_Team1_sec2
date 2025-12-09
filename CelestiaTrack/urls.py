@@ -32,6 +32,7 @@ from home.views import (
     favorites,
     weather_api,
     aurora_api,
+    event_detail,
 )
 
 
@@ -63,6 +64,7 @@ urlpatterns = [
 
     # Aurora API
     path('api/aurora/', aurora_api, name='aurora_api'),
+    path('event/detail/', event_detail, name='event_detail'),
 ]
 
 # Serve media files in all environments (Render included)

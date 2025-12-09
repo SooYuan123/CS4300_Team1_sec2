@@ -296,6 +296,7 @@ def fetch_solar_eclipse_data(from_date=None, to_date=None):
         print(f"Error fetching solar eclipse data: {e}")
         return []
 
+
 # -------------------------
 # Open-Meteo – twilight events
 # -------------------------
