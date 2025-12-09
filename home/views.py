@@ -22,8 +22,6 @@ from .utils import (
     fetch_meteor_shower_events,
     fetch_fireball_events,
     get_celestial_bodies_with_visibility,
-    fetch_moon_phase,
-    fetch_solar_eclipse_data,
     fetch_weather_forecast,
 )
 
@@ -96,7 +94,6 @@ def events_list(request):
     return render(request, "events_list.html", {
         "location": "Colorado Springs, CO",
     })
-
 
 
 def _earliest_peak_from_events(events):
